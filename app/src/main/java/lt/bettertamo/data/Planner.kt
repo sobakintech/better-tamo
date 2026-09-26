@@ -1,0 +1,162 @@
+@file:UseSerializers(LocalDateSerializer::class, YearMonthSerializer::class)
+
+package lt.bettertamo.data
+
+import kotlinx.serialization.Serializable
+import java.time.DayOfWeek
+import java.time.LocalDate
+import kotlinx.serialization.UseSerializers
+import java.time.LocalTime
+import java.time.temporal.TemporalAdjusters
+
+@Serializable
+data class Lesson(
+    val id: String,
+    val subjectId: String,
+    val subject: String,
+    val teacherId: String,
+    val teacher: String,
+    val weekday: Int,
+    val slot: Int,
+    val room: String,
+    val topic: String = "",
+    val date: LocalDate? = null,
+    val startTime: String? = null,
+    val endTime: String? = null,
+    val sid: String = "",
+    val details: List<LessonDetail> = emptyList(),
+    val canRename: Boolean = true,
+    val assessment: String = "",
+    val label: String = "",
+    val important: Boolean = false,
+    val note: String = "",
+    val average: String = "",
+    val trend: String = "",
+    val unusedFormatives: List<LessonDetail> = emptyList(),
+) {
+    val slotKey get() = "$weekday:$slot"
+    val start get() = startTime ?: bellTimes.getOrNull(slot - 1)?.first.orEmpty()
+    val end get() = endTime ?: bellTimes.getOrNull(slot - 1)?.second.orEmpty()
+    val formatives get() = details.filter { it.key == "formative" }.map { it.badge }.filter { it.isNotBlank() }
+    val hasHomework get() = details.any { it.key == "homework" }
+}
+
+@Serializable
+data class Homework(
+    val id: String,
+    val lessonId: String,
+    val dueDay: Int,
+    val text: String,
+    val assignedDay: Int,
+    val dueDate: LocalDate? = null,
+    val assignedDate: LocalDate? = null,
+    val subject: String = "",
+    val completed: Boolean = false,
+)
+
+@Serializable
+data class LessonDetail(val title: String, val text: String, val files: List<SchoolFile> = emptyList(), val key: String = "", val badge: String = "", val label: String = "")
+@Serializable
+data class SchoolFile(val sid: String, val name: String)
+
+enum class MatchMode { SLOTS, TEACHER }
+
+@Serializable
+data class LessonRule(
+    val id: String,
+    val subjectId: String,
+    val name: String,
+    val color: Int,
+    val mode: MatchMode,
+    val slots: Set<String> = emptySet(),
+    val teacherId: String = "",
+) {
+    fun matches(lesson: Lesson): Boolean = lesson.canRename && subjectId == lesson.subjectId && when (mode) {
+        MatchMode.SLOTS -> lesson.slot > 0 && lesson.slotKey in slots
+        MatchMode.TEACHER -> teacherId.isNotBlank() && teacherId == lesson.teacherId
+    }
+}
+
+@Serializable
+data class CustomEvent(
+    val id: String,
+    val title: String,
+    val weekdays: Set<Int>,
+    val start: String,
+    val end: String,
+    val room: String = "",
+    val note: String = "",
+    val color: Int = 4,
+    val slot: Int = 0,
+)
+
+@Serializable
+data class PlannerState(
+    val rules: List<LessonRule> = emptyList(),
+    val events: List<CustomEvent> = emptyList(),
+    val completedHomework: Set<String> = emptySet(),
+    val theme: String = "system",
+    val ruleSources: List<RuleSource> = emptyList(),
+)
+
+@Serializable
+data class RuleSource(val subjectId: String, val subject: String, val teacherId: String, val teacher: String, val weekday: Int, val slot: Int, val start: String) {
+    fun lesson() = Lesson("saved:$subjectId:$weekday:$slot:$teacherId", subjectId, subject, teacherId, teacher, weekday, slot, "", startTime = start)
+    companion object {
+        fun from(lesson: Lesson) = RuleSource(lesson.subjectId, lesson.subject, lesson.teacherId, lesson.teacher, lesson.weekday, lesson.slot, lesson.start)
+    }
+}
+
+fun validRule(rule: LessonRule): Boolean = rule.name.isNotBlank() && rule.subjectId.isNotBlank() && when (rule.mode) {
+    MatchMode.TEACHER -> rule.teacherId.isNotBlank()
+    MatchMode.SLOTS -> rule.slots.isNotEmpty() && rule.slots.all { slot ->
+        val parts = slot.split(":")
+        parts.size == 2 && parts[0].toIntOrNull() in 1..7 && parts[1].toIntOrNull() in 1..30
+    }
+}
+
+data class ResolvedSubject(val name: String, val color: Int, val rule: LessonRule?)
+
+fun resolveSubject(lesson: Lesson, rules: List<LessonRule>): ResolvedSubject {
+    val rule = rules.lastOrNull { it.mode == MatchMode.SLOTS && it.matches(lesson) }
+        ?: rules.lastOrNull { it.mode == MatchMode.TEACHER && it.matches(lesson) }
+    return ResolvedSubject(rule?.name ?: lesson.subject, rule?.color ?: defaultColor(lesson.subjectId), rule)
+}
+
+fun ruleConflict(candidate: LessonRule, rules: List<LessonRule>): Boolean = rules.any {
+    it.id != candidate.id && it.subjectId == candidate.subjectId && it.mode == candidate.mode &&
+        when (candidate.mode) {
+            MatchMode.SLOTS -> it.slots.intersect(candidate.slots).isNotEmpty()
+            MatchMode.TEACHER -> it.teacherId == candidate.teacherId
+        }
+}
+
+fun validEvent(event: CustomEvent): Boolean {
+    if (event.title.isBlank() || event.weekdays.isEmpty() || event.weekdays.any { it !in 1..7 }) return false
+    return runCatching {
+        Regex("\\d{2}:\\d{2}").matches(event.start) && Regex("\\d{2}:\\d{2}").matches(event.end) &&
+            LocalTime.parse(event.end).isAfter(LocalTime.parse(event.start))
+    }.getOrDefault(false)
+}
+
+fun eventsOn(date: LocalDate, events: List<CustomEvent>, lessons: List<Lesson> = emptyList()) =
+    events.filter { event ->
+        date.dayOfWeek.value in event.weekdays &&
+            (event.slot == 0 || lessons.none { it.slot == event.slot || (it.start.isNotBlank() && it.start < event.end && it.end > event.start) })
+    }.sortedBy { it.start }
+
+fun mondayOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+
+val dayShort = listOf("Pr", "An", "Tr", "Kt", "Pn", "Št", "Sk")
+val dayLong = listOf("Pirmadienis", "Antradienis", "Trečiadienis", "Ketvirtadienis", "Penktadienis", "Šeštadienis", "Sekmadienis")
+val bellTimes = listOf("08:10" to "08:55", "09:05" to "09:50", "10:00" to "10:45", "11:15" to "12:00", "12:25" to "13:10", "13:20" to "14:05", "14:15" to "15:00")
+
+private fun defaultColor(subjectId: String): Int = when (subjectId) {
+    "science" -> 0
+    "lithuanian" -> 3
+    "math" -> 1
+    "geography", "history" -> 2
+    "english", "media" -> 4
+    else -> 5
+}
+
