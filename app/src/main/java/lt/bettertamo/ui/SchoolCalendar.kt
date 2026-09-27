@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import lt.bettertamo.data.*
+import androidx.compose.ui.text.style.TextOverflow
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -48,7 +49,8 @@ fun TimetableMonthHeader(month: YearMonth, expanded: Boolean, onToggle: () -> Un
                 shape = CircleShape, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f).compositeOver(MaterialTheme.colorScheme.primaryContainer), contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
                 Row(Modifier.padding(start = 16.dp, end = 10.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(18.dp))
-                    Text(month.format(DateTimeFormatter.ofPattern("yyyy LLLL", Locale.forLanguageTag("lt"))).replaceFirstChar { it.titlecase(Locale.forLanguageTag("lt")) }, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                    Text(month.format(DateTimeFormatter.ofPattern(if (month.year == LocalDate.now().year) "LLLL" else "yyyy LLLL", Locale.forLanguageTag("lt"))).replaceFirstChar { it.titlecase(Locale.forLanguageTag("lt")) },
+                        Modifier.weight(1f, fill = false), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Icon(if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, if (expanded) "Uždaryti kalendorių" else "Atidaryti kalendorių", Modifier.size(20.dp))
                 }
             }
