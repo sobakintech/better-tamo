@@ -147,6 +147,16 @@ class LiveShapeTest {
         assertEquals(listOf("w"), eventsOn(tuesday, listOf(gapLesson, weekly), listOf(real)).map { it.id })
     }
 
+    @Test fun weeklyEventsHideWhenTamoHasTheSameLesson() {
+        val monday = LocalDate.of(2026, 9, 21)
+        val module = CustomEvent("m", "MMB", setOf(1), "15:00", "15:45")
+        val real = Lesson("9", "event:9", "mmb", "", "", 1, 0, "", date = monday, startTime = "15:05", endTime = "15:50")
+        val other = real.copy(subject = "Istorija")
+        assertTrue(eventsOn(monday, listOf(module), listOf(real)).isEmpty())
+        assertEquals(listOf("m"), eventsOn(monday, listOf(module), listOf(other)).map { it.id })
+        assertEquals(listOf("m"), eventsOn(monday, listOf(module), listOf(real.copy(startTime = "16:00", endTime = "16:45"))).map { it.id })
+    }
+
     @Test fun assessmentLabelsAreHighlighted() {
         val lesson = Lesson("1", "s", "Istorija", "t", "T", 1, 1, "")
         assertTrue(lesson.copy(label = "Savarankiškas darbas").highlighted)

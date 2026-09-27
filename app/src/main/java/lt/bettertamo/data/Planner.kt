@@ -142,8 +142,11 @@ fun validEvent(event: CustomEvent): Boolean {
 
 fun eventsOn(date: LocalDate, events: List<CustomEvent>, lessons: List<Lesson> = emptyList()) =
     events.filter { event ->
-        date.dayOfWeek.value in event.weekdays &&
-            (event.slot == 0 || lessons.none { it.slot == event.slot || (it.start.isNotBlank() && it.start < event.end && it.end > event.start) })
+        date.dayOfWeek.value in event.weekdays && lessons.none { lesson ->
+            val overlaps = lesson.start.isNotBlank() && lesson.start < event.end && lesson.end > event.start
+            if (event.slot > 0) lesson.slot == event.slot || overlaps
+            else overlaps && lesson.subject.trim().equals(event.title.trim(), ignoreCase = true)
+        }
     }.sortedBy { it.start }
 
 fun mondayOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
