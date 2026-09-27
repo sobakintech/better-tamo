@@ -430,10 +430,12 @@ fun LessonCard(title: String, description: String, custom: Boolean = false, star
                 VerticalDivider(Modifier.fillMaxHeight(), color = MaterialTheme.colorScheme.outlineVariant)
             }
             Column(Modifier.weight(1f)) {
-                val overline = if (custom) "Mano įvykis" else lessonLabel
-                if (overline.isNotBlank()) Text(overline.uppercase(ltLocale), style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.6.sp, lineHeight = 14.sp), maxLines = 1,
-                    color = when { important -> MaterialTheme.colorScheme.error; custom -> MaterialTheme.colorScheme.onSurfaceVariant; else -> MaterialTheme.colorScheme.tertiary })
-                Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                if (lessonLabel.isNotBlank()) Text(lessonLabel.uppercase(ltLocale), style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.6.sp, lineHeight = 14.sp), maxLines = 1,
+                    color = if (important) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (custom) Icon(Icons.Outlined.EditCalendar, "Mano įvykis", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                }
                 if (description.isNotBlank()) Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = descriptionLines, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 if (teacher.isNotBlank()) Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(Icons.Outlined.Person, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
