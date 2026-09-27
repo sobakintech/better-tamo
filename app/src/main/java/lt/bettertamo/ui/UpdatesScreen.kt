@@ -2,11 +2,9 @@
 
 package lt.bettertamo.ui
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Chat
@@ -58,11 +56,7 @@ fun EventsScreen() {
     fun refresh() = if (remarkView) vm.loadRemarks(month, true) else vm.loadFeed(true)
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Naujausi įvykiai") {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("Visi", "Pažymiai", "Namų darbai", "Pastabos").forEachIndexed { index, label ->
-                    FilterChip(filter == index, { filter = index }, label = { Text(label) })
-                }
-            }
+            HeaderFilters(listOf("Visi", "Pažymiai", "Namų darbai", "Pastabos").map { it to null }, filter) { filter = it }
         }
         if (remarkView) MonthNavigation(month, { monthText = it.toString() }, { vm.loadRemarks(month, true) }, "Atnaujinti pastabas")
         ReadStatus(channel, showProgress = false) { refresh() }

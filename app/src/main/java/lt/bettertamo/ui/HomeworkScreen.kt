@@ -3,8 +3,6 @@
 package lt.bettertamo.ui
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.alpha
@@ -83,11 +81,7 @@ fun HomeworkScreen(state: PlannerState, toggle: (String) -> Unit) {
                     }
                     ProfileButton()
                 }
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("Visi" to allWork.size, "Neatlikti" to allWork.size - done, "Atlikti" to done).forEachIndexed { index, (label, count) ->
-                        FilterChip(filter == index, { filter = index }, label = { Text(if (loaded) "$label $count" else label) })
-                    }
-                }
+                HeaderFilters(listOf("Visi" to allWork.size, "Neatlikti" to allWork.size - done, "Atlikti" to done).map { (label, count) -> label to count.takeIf { loaded } }, filter) { filter = it }
             }
         }
         if ("homework" in errors) ReadStatus("homework", showProgress = false) { vm.loadHomework(past, true) }

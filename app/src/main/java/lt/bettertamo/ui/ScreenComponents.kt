@@ -1,6 +1,10 @@
 package lt.bettertamo.ui
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -151,6 +155,24 @@ fun ScreenHeader(title: String, back: (() -> Unit)? = null, subtitle: String? = 
                 if (back == null) ProfileButton()
             }
             content()
+        }
+    }
+}
+
+@Composable
+fun HeaderFilters(options: List<Pair<String, Int?>>, selected: Int, onSelect: (Int) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        options.forEachIndexed { index, (label, count) ->
+            val active = index == selected
+            val container by animateColorAsState(if (active) colors.primary else colors.onPrimaryContainer.copy(alpha = 0.1f).compositeOver(colors.primaryContainer), label = "filter")
+            val content by animateColorAsState(if (active) colors.onPrimary else colors.onPrimaryContainer, label = "filterText")
+            Surface(selected = active, onClick = { onSelect(index) }, shape = CircleShape, color = container, contentColor = content) {
+                Row(Modifier.heightIn(min = 36.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(label, style = MaterialTheme.typography.labelLarge)
+                    if (count != null) Text("$count", style = MaterialTheme.typography.labelLarge, color = content.copy(alpha = 0.7f))
+                }
+            }
         }
     }
 }
