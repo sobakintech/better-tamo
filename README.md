@@ -104,7 +104,7 @@ Prefer `am instrument` over `connectedDebugAndroidTest` on a device you actually
 
 ## Releases
 
-To publish a release, run the **Release** workflow from the **Actions** tab. [`.github/workflows/release.yml`](.github/workflows/release.yml) runs the unit tests, then builds, signs and publishes the APK to GitHub Releases, tagged `v<versionName>` (e.g. `v2026.09.26.2200`).
+Every push to `main` publishes a release, except pushes that only change Markdown files. You can also run the **Release** workflow manually from the **Actions** tab. [`.github/workflows/release.yml`](.github/workflows/release.yml) runs the unit tests, then builds, signs and publishes the APK to GitHub Releases, tagged `v<versionName>` (e.g. `v2026.09.26.2200`).
 
 It needs these repository secrets:
 

@@ -8,7 +8,7 @@ Native Android TAMO school diary client (Kotlin, Jetpack Compose, Material 3). P
 - Never write to the real account without asking first. This includes homework completion sync (`POST core/app/darbai/namu/atlikimas`), sending or deleting messages, and the test notification (it can notify the user's other devices).
 - Don't print or extract the session token or official app credentials. Remove any temporary response dumps and their files before finishing.
 - Unit tests use fictional fixtures only. UI tests use an isolated Compose activity with synthetic data, never `MainActivity` or the live API.
-- Versions come from the build time (`yyyy.MM.dd.HHmm`); releases are published by the manual Release workflow.
+- Versions come from the build time (`yyyy.MM.dd.HHmm`); every push to `main` (except Markdown-only changes) publishes a release through the Release workflow, which can also be run manually.
 - In-app updates read GitHub's latest release (`v<versionName>` tag with an `.apk` asset) and install it through a `PackageInstaller` session. Release builds check on open (at most hourly); debug builds only check from Daugiau and can't install release APKs (different signing key).
 
 ## Design direction
