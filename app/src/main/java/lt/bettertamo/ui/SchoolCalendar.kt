@@ -72,7 +72,7 @@ fun TimetableWeekStrip(date: LocalDate, onDate: (LocalDate) -> Unit) {
             val isSelected = day == date
             val isToday = day == today
             val ink = if (index >= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer
-            val hasTest = school.lessons.any { it.date == day && it.important }
+            val hasTest = school.lessons.any { it.date == day && it.highlighted }
             val dots = badges[day].orEmpty().map { if ("homework" in it) MaterialTheme.colorScheme.tertiary else ink }.toMutableList()
             if (hasTest) dots.indexOf(ink).let { if (it >= 0) dots[it] = MaterialTheme.colorScheme.error else dots.add(0, MaterialTheme.colorScheme.error) }
             Surface(

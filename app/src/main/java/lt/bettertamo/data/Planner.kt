@@ -39,6 +39,7 @@ data class Lesson(
     val end get() = endTime ?: bellTimes.getOrNull(slot - 1)?.second.orEmpty()
     val formatives get() = details.filter { it.key == "formative" }.map { it.badge }.filter { it.isNotBlank() }
     val hasHomework get() = details.any { it.key == "homework" }
+    val highlighted get() = important || label.isNotBlank()
 }
 
 @Serializable

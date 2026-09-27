@@ -326,7 +326,7 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
                             val subject = resolveSubject(lesson, state.rules)
                             LessonCard(subject.name, lesson.topic, start = lesson.start, end = lesson.end, slot = lesson.slot,
                                 dueHomework = lesson.hasHomework, assignedHomework = lesson.details.any { it.key == "homework_next" } || school.homework.any { it.lessonId == lesson.id },
-                                assessment = lesson.assessment, lessonLabel = lesson.label, important = lesson.important, remark = lesson.note, formatives = lesson.formatives, average = lesson.average, trend = lesson.trend) { openLesson(lesson.id) }
+                                assessment = lesson.assessment, lessonLabel = lesson.label, important = lesson.highlighted, remark = lesson.note, formatives = lesson.formatives, average = lesson.average, trend = lesson.trend) { openLesson(lesson.id) }
                         }
                         entry.event?.let { event ->
                             LessonCard(event.title, event.note, custom = true, start = event.start, end = event.end, slot = event.slot.takeIf { it > 0 }) { openEvent(event.id) }

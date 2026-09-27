@@ -47,7 +47,7 @@ fun lessonEntries(lesson: Lesson, homework: List<Homework>): List<LessonDetail> 
 fun LessonHeaderCard(lesson: Lesson, state: PlannerState, container: Color) {
     val accent = MaterialTheme.colorScheme.error
     Surface(shape = RoundedCornerShape(20.dp), color = container, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).drawBehind { if (lesson.important) drawRect(accent, size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height)) }
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).drawBehind { if (lesson.highlighted) drawRect(accent, size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height)) }
             .padding(horizontal = 18.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             if (lesson.start.isNotBlank()) {
                 Column(Modifier.widthIn(min = 52.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
@@ -59,7 +59,7 @@ fun LessonHeaderCard(lesson: Lesson, state: PlannerState, container: Color) {
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (lesson.label.isNotBlank()) Text(lesson.label.uppercase(), style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp),
-                    color = if (lesson.important) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary)
+                    color = if (lesson.highlighted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary)
                 Text(resolveSubject(lesson, state.rules).name, style = MaterialTheme.typography.titleLarge)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     lesson.date?.let { DetailRow(Icons.Outlined.Event, "${dayLong[it.dayOfWeek.value - 1]}, ${it.format(DateTimeFormatter.ofPattern("MM.dd"))}") }

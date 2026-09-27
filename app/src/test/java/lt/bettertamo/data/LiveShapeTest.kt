@@ -146,4 +146,11 @@ class LiveShapeTest {
         assertEquals(listOf("e", "w"), eventsOn(tuesday, listOf(gapLesson, weekly)).map { it.id }.sorted())
         assertEquals(listOf("w"), eventsOn(tuesday, listOf(gapLesson, weekly), listOf(real)).map { it.id })
     }
+
+    @Test fun assessmentLabelsAreHighlighted() {
+        val lesson = Lesson("1", "s", "Istorija", "t", "T", 1, 1, "")
+        assertTrue(lesson.copy(label = "Savarankiškas darbas").highlighted)
+        assertTrue(lesson.copy(label = "Kontrolinis darbas").highlighted)
+        assertFalse(lesson.highlighted)
+    }
 }
