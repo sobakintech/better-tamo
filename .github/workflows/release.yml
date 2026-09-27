@@ -60,7 +60,7 @@ jobs:
         run: |
           gh release create "v$VERSION" "better-tamo-$VERSION.apk" \
             --target "$GITHUB_SHA" \
-            --title "Better TAMO $VERSION" \
+            --title "$VERSION" \
             --generate-notes
 
       - name: Remove signing key
