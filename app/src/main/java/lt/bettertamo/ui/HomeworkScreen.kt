@@ -80,6 +80,7 @@ fun HomeworkScreen(state: PlannerState, toggle: (Homework) -> Unit) {
                             }
                         }
                     }
+                    KeepScreenOnButton()
                     ProfileButton()
                 }
                 HeaderFilters(listOf("Visi" to allWork.size, "Neatlikti" to allWork.size - done, "Atlikti" to done).map { (label, count) -> label to count.takeIf { loaded } }, filter) { filter = it }

@@ -300,7 +300,7 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
         Column {
             Surface(color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
                 Column {
-                    TimetableMonthHeader(YearMonth.from(date), false, { monthText = YearMonth.from(date).toString(); expanded = true }, { selectDate(date.minusWeeks(1)) }, { selectDate(date.plusWeeks(1)) }, { selectDate(LocalDate.now()) }) { ProfileButton() }
+                    TimetableMonthHeader(YearMonth.from(date), false, { monthText = YearMonth.from(date).toString(); expanded = true }, { selectDate(date.minusWeeks(1)) }, { selectDate(date.plusWeeks(1)) }, { selectDate(LocalDate.now()) }) { KeepScreenOnButton(); ProfileButton() }
                     TimetableWeekStrip(date, selectDate)
                 }
             }

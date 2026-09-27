@@ -15,11 +15,13 @@ import lt.bettertamo.data.DiaryKind
 import lt.bettertamo.data.dayLong
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -137,6 +139,22 @@ fun ProfileButton() {
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(34.dp)) {
             Box(contentAlignment = Alignment.Center) { Text(initials, style = MaterialTheme.typography.labelLarge) }
         }
+    }
+}
+
+@Composable
+fun KeepScreenOnButton() {
+    val view = LocalView.current
+    var on by remember { mutableStateOf(false) }
+    DisposableEffect(on) {
+        view.keepScreenOn = on
+        onDispose { view.keepScreenOn = false }
+    }
+    IconToggleButton(checked = on, onCheckedChange = {
+        on = it
+        if (it) android.widget.Toast.makeText(view.context, "Ekranas neužges", android.widget.Toast.LENGTH_SHORT).show()
+    }, colors = IconButtonDefaults.iconToggleButtonColors(checkedContainerColor = MaterialTheme.colorScheme.primary, checkedContentColor = MaterialTheme.colorScheme.onPrimary)) {
+        Icon(if (on) Icons.Filled.Coffee else Icons.Outlined.Coffee, "Neleisti ekranui užgesti")
     }
 }
 
