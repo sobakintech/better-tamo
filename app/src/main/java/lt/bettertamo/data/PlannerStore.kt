@@ -76,6 +76,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
 
     private val ui = application.getSharedPreferences("ui", Context.MODE_PRIVATE)
     val initialTheme: String = ui.getString("theme", null) ?: "system"
+    val accent = MutableStateFlow(ui.getString("accent", null))
 
     init {
         if (SchoolUpdates.enabled(application)) SchoolUpdates.setEnabled(application, true)
@@ -511,6 +512,10 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
     fun deleteEvent(id: String) = update { it.copy(events = it.events.filterNot { event -> event.id == id }) }
     fun toggleHomework(id: String) = update {
         it.copy(completedHomework = if (id in it.completedHomework) it.completedHomework - id else it.completedHomework + id)
+    }
+    fun setAccent(key: String) {
+        accent.value = key
+        ui.edit { putString("accent", key) }
     }
     fun setTheme(theme: String) {
         update { it.copy(theme = theme) }

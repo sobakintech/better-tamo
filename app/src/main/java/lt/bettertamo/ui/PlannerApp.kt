@@ -67,6 +67,7 @@ fun PlannerApp(vm: PlannerViewModel) {
     val loginError by vm.loginError.collectAsStateWithLifecycle()
     val school by vm.school.collectAsStateWithLifecycle()
     val changingAccount by vm.changingAccount.collectAsStateWithLifecycle()
+    val accent by vm.accent.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(vm) {
         vm.fileLinks.collect { (url, name) ->
@@ -80,7 +81,7 @@ fun PlannerApp(vm: PlannerViewModel) {
             }.onFailure { vm.error.value = "Priedo atsisiųsti nepavyko." }
         }
     }
-    BetterTamoTheme(state?.theme ?: vm.initialTheme) {
+    BetterTamoTheme(state?.theme ?: vm.initialTheme, Accent.from(accent)) {
         val data = state
         if (data == null || !ready) {
             Surface(Modifier.fillMaxSize()) {

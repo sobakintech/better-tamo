@@ -2,8 +2,10 @@
 
 package lt.bettertamo.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -25,12 +27,16 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,6 +82,7 @@ fun MoreScreen(back: () -> Unit, open: (String) -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
     val menu by vm.menu.collectAsStateWithLifecycle()
     val changingAccount by vm.changingAccount.collectAsStateWithLifecycle()
+    val accent by vm.accent.collectAsStateWithLifecycle()
     var signOut by remember { mutableStateOf(false) }
     var switchAccount by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
@@ -124,7 +131,7 @@ fun MoreScreen(back: () -> Unit, open: (String) -> Unit) {
                 MenuGroup("Nustatymai") {
                     MenuRow(Icons.Outlined.Tune, "Mano pamokos", Modifier.testTag("open-personalization"), subtitle = "Pamokų pavadinimai ir tavo įvykiai", onClick = { open("personalization") })
                     NotificationSetting()
-                    ThemeSetting(state?.theme ?: "system", vm::setTheme)
+                    ThemeSetting(state?.theme ?: "system", vm::setTheme, Accent.from(accent), vm::setAccent)
                 }
             }
             item {
@@ -157,7 +164,7 @@ fun MoreScreen(back: () -> Unit, open: (String) -> Unit) {
 }
 
 @Composable
-private fun ThemeSetting(theme: String, setTheme: (String) -> Unit) {
+private fun ThemeSetting(theme: String, setTheme: (String) -> Unit, accent: Accent, setAccent: (String) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Icon(Icons.Outlined.Palette, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -169,6 +176,27 @@ private fun ThemeSetting(theme: String, setTheme: (String) -> Unit) {
                 SegmentedButton(selected = theme == value, onClick = { setTheme(value) }, shape = SegmentedButtonDefaults.itemShape(index, options.size)) { Text(label, maxLines = 1) }
             }
         }
+        Text("Spalvos · ${accent.label}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
+        LazyRow(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            items(Accent.entries.filter { it != Accent.SYSTEM || Accent.systemAvailable }) { option ->
+                AccentSwatch(option, option == accent) { setAccent(option.key) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccentSwatch(accent: Accent, selected: Boolean, onClick: () -> Unit) {
+    val colors = accentColors(accent, isDarkTheme)
+    val ring = MaterialTheme.colorScheme.onSurface
+    Box(Modifier.size(52.dp).clip(CircleShape).selectable(selected, role = Role.RadioButton, onClick = onClick).semantics { contentDescription = accent.label }, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(if (selected) 36.dp else 44.dp)) {
+            drawArc(colors.primary, 180f, 180f, true)
+            drawArc(colors.secondaryContainer, 90f, 90f, true)
+            drawArc(colors.tertiaryContainer, 0f, 90f, true)
+        }
+        if (selected) Canvas(Modifier.size(48.dp)) { drawCircle(ring, style = Stroke(2.dp.toPx())) }
+        if (accent == Accent.SYSTEM) Icon(Icons.Outlined.Wallpaper, null, Modifier.size(16.dp), tint = colors.onPrimary)
     }
 }
 

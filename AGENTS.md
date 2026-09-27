@@ -31,7 +31,7 @@ Follow the official TAMO school diary's structure while using native Compose/Mat
 - Subject and semester pages preserve official aggregate meaning. Do not attribute a combined subject's aggregate grades to an individual override without an actual record link.
 - Custom events use normal lesson-card styling with a small calendar icon before the title (no text label, no colours). A weekly event hides on days when TAMO has an overlapping lesson with the same name (gap lessons: any lesson in that slot/time). Their editor and recurring rename rules live under Daugiau → Mano pamokos. No general timetable add-event button; adding happens from gap rows or Mano pamokos.
 - Rename by recurring weekday/slot or subject plus teacher; no one-time-date rules and no subject colours. Resolve homework using its originating lesson, never its due date.
-- Keep light, dark and system themes. Retain native touch targets and readable text scaling. The palette stays green.
+- Keep light, dark and system themes. Retain native touch targets and readable text scaling. The default palette is the hand-tuned Better TAMO green; Daugiau also offers the device's wallpaper colours (Android 12+) and Pixel's "Basic colors" presets, never a free colour picker. Meaningful colours stay fixed across accents (`StatusColors`: good/fair averages, praise, rising trend; red for errors, weekends, tests and remarks).
 - No temporary/sample notices in product screens. Sign-in has no decorative icon, and both headings are centered.
 
 ## Protocol notes

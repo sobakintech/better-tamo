@@ -67,6 +67,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
+    implementation("com.materialkolor:material-kolor:4.0.5")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("androidx.webkit:webkit:1.17.1")

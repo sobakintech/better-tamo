@@ -1,5 +1,6 @@
 package lt.bettertamo.ui
 
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -9,17 +10,24 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamicColorScheme
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF285E49), onPrimary = Color.White,
@@ -60,6 +68,27 @@ private val type = Typography(
     labelMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp),
 )
 
+// Pixel's "Basic colors" presets with the palette style Android applies to each.
+enum class Accent(val label: String, val seed: Color?, val style: PaletteStyle = PaletteStyle.TonalSpot) {
+    GREEN("Better TAMO žalia", Color(0xFF285E49)),
+    SYSTEM("Pagal įrenginį", null),
+    INDIGO("Indigo", Color(0xFF6F9BFF), PaletteStyle.Vibrant),
+    IRIS("Vilkdalgis", Color(0xFFBAC3FF), PaletteStyle.Expressive),
+    JADE("Nefritas", Color(0xFFB6CF90)),
+    LEMONGRASS("Citrinžolė", Color(0xFFDDEB78), PaletteStyle.Expressive),
+    MOONSTONE("Mėnulio akmuo", Color(0xFF9A9EAD), PaletteStyle.Neutral),
+    OBSIDIAN("Obsidianas", Color(0xFF404945), PaletteStyle.Neutral),
+    PEONY("Bijūnas", Color(0xFFFF6F7F), PaletteStyle.Vibrant),
+    PORCELAIN("Porcelianas", Color(0xFFCFC6B4), PaletteStyle.Neutral);
+
+    val key get() = name.lowercase()
+
+    companion object {
+        val systemAvailable get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        fun from(key: String?) = entries.find { it.key == key }?.takeIf { it != SYSTEM || systemAvailable } ?: GREEN
+    }
+}
+
 private val LocalDarkTheme = staticCompositionLocalOf { false }
 
 // Colours that carry meaning and must not follow the accent.
@@ -72,8 +101,11 @@ private fun ColorScheme.withStatusColors(dark: Boolean) =
     if (dark) copy(error = Color(0xFFFF6B6B), onError = Color(0xFF4A0006), errorContainer = Color(0xFF7A1216), onErrorContainer = Color(0xFFFFDAD6))
     else copy(error = Color(0xFFD01F1F), onError = Color.White, errorContainer = Color(0xFFFFDAD6), onErrorContainer = Color(0xFF5C0008))
 
+// Generated dark schemes put the lowest container below the background; cards need it lifted like the green palette.
+private fun ColorScheme.liftCards(dark: Boolean) = if (dark) copy(surfaceContainerLowest = lerp(surfaceContainerLow, surfaceContainer, 0.5f)) else this
+
 @Composable
-fun BetterTamoTheme(theme: String = "system", content: @Composable () -> Unit) {
+fun BetterTamoTheme(theme: String = "system", accent: Accent = Accent.GREEN, content: @Composable () -> Unit) {
     val dark = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
     val activity = LocalActivity.current as? ComponentActivity
     DisposableEffect(activity, dark) {
@@ -83,6 +115,18 @@ fun BetterTamoTheme(theme: String = "system", content: @Composable () -> Unit) {
         onDispose { }
     }
     CompositionLocalProvider(LocalDarkTheme provides dark) {
-        MaterialTheme(colorScheme = (if (dark) DarkColors else LightColors).withStatusColors(dark), typography = type, content = content)
+        MaterialTheme(colorScheme = accentColors(accent, dark).withStatusColors(dark), typography = type, content = content)
+    }
+}
+
+val isDarkTheme: Boolean @Composable @ReadOnlyComposable get() = LocalDarkTheme.current
+
+@Composable
+fun accentColors(accent: Accent, dark: Boolean): ColorScheme {
+    val context = LocalContext.current
+    return when {
+        accent == Accent.GREEN -> if (dark) DarkColors else LightColors
+        accent == Accent.SYSTEM && Accent.systemAvailable -> (if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)).liftCards(dark)
+        else -> remember(accent, dark) { dynamicColorScheme(accent.seed ?: Accent.GREEN.seed!!, dark, style = accent.style).liftCards(dark) }
     }
 }
