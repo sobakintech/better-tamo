@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -273,15 +275,23 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
     RefreshOnResume(if (expanded) month else YearMonth.from(date)) { vm.loadMonth(if (expanded) month else YearMonth.from(date)) }
     RefreshOnResume(mondayOf(date)) { vm.loadWeek(date) }
     BackHandler(expanded) { expanded = false }
-    val schoolEvents = school.calendarEvents.filter { it.contains(date) }
-    val lessons = school.lessons.filter { it.date == date }
-    val events = eventsOn(date, state.events, lessons)
-    val weekComplete = readComplete("week", mondayOf(date).toString())
     val loading by vm.loading.collectAsStateWithLifecycle()
     val readErrors by vm.readErrors.collectAsStateWithLifecycle()
     fun chooseDate(day: LocalDate) {
         selectDate(day)
         expanded = false
+    }
+    val pager = rememberPagerState(initialPage = dayPage(date)) { DAY_PAGES }
+    val currentDate by rememberUpdatedState(date)
+    val currentSelect by rememberUpdatedState(selectDate)
+    LaunchedEffect(pager) {
+        snapshotFlow { pager.settledPage }.collect { page -> if (page != dayPage(currentDate)) currentSelect(pageDay(page)) }
+    }
+    LaunchedEffect(date) {
+        val target = dayPage(date)
+        if (pager.currentPage != target) {
+            if (kotlin.math.abs(pager.currentPage - target) <= 7) pager.animateScrollToPage(target) else pager.scrollToPage(target)
+        }
     }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val panelHeight = maxHeight * 0.86f
@@ -294,25 +304,32 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
             }
             if ("week" in readErrors) ReadStatus("week", showProgress = false) { vm.loadWeek(date, true) }
             else if ("month" in readErrors) ReadStatus("month", showProgress = false) { vm.loadMonth(YearMonth.from(date), true) }
-            TimetableList(
-                isRefreshing = "week" in loading || "month" in loading,
-                onRefresh = { vm.loadWeek(date, true); vm.loadMonth(YearMonth.from(date), true) },
-            ) {
-                if (schoolEvents.isNotEmpty()) {
-                    items(schoolEvents, key = { it.id }) { event -> SchoolEventCard(event) { expanded = true } }
-                }
-                if (weekComplete && lessons.isEmpty() && events.isEmpty() && schoolEvents.isEmpty()) item { EmptyPanel(Icons.Outlined.WbSunny, if (date.dayOfWeek.value >= 6) "Savaitgalis" else "Laisva diena", "Šią dieną pamokų nėra.") }
-                val entries = timetableRows((lessons.map { TimetableEntry(it.start, lesson = it) } + events.map { TimetableEntry(it.start, event = it) }).sortedBy { it.start }, slotTimes(school.lessons), events)
-                items(entries, key = { it.gap?.let { gap -> "gap-${gap.start}" } ?: it.lesson?.id ?: "event-${it.event!!.id}" }) { entry ->
-                    entry.gap?.let { gap -> FreePeriod(gap) { addLesson(gap) } }
-                    entry.lesson?.let { lesson ->
-                        val subject = resolveSubject(lesson, state.rules)
-                        LessonCard(subject.name, lesson.topic, start = lesson.start, end = lesson.end, slot = lesson.slot,
-                            dueHomework = lesson.hasHomework, assignedHomework = lesson.details.any { it.key == "homework_next" } || school.homework.any { it.lessonId == lesson.id },
-                            assessment = lesson.assessment, lessonLabel = lesson.label, important = lesson.important, remark = lesson.note, formatives = lesson.formatives, average = lesson.average, trend = lesson.trend) { openLesson(lesson.id) }
+            HorizontalPager(pager, Modifier.weight(1f), pageSpacing = 16.dp, key = { it }) { page ->
+                val day = pageDay(page)
+                val schoolEvents = school.calendarEvents.filter { it.contains(day) }
+                val lessons = school.lessons.filter { it.date == day }
+                val events = eventsOn(day, state.events, lessons)
+                val weekComplete = readComplete("week", mondayOf(day).toString())
+                TimetableList(
+                    isRefreshing = "week" in loading || "month" in loading,
+                    onRefresh = { vm.loadWeek(day, true); vm.loadMonth(YearMonth.from(day), true) },
+                ) {
+                    if (schoolEvents.isNotEmpty()) {
+                        items(schoolEvents, key = { it.id }) { event -> SchoolEventCard(event) { expanded = true } }
                     }
-                    entry.event?.let { event ->
-                        LessonCard(event.title, event.note, custom = true, start = event.start, end = event.end, slot = event.slot.takeIf { it > 0 }) { openEvent(event.id) }
+                    if (weekComplete && lessons.isEmpty() && events.isEmpty() && schoolEvents.isEmpty()) item { EmptyPanel(Icons.Outlined.WbSunny, if (day.dayOfWeek.value >= 6) "Savaitgalis" else "Laisva diena", "Šią dieną pamokų nėra.") }
+                    val entries = timetableRows((lessons.map { TimetableEntry(it.start, lesson = it) } + events.map { TimetableEntry(it.start, event = it) }).sortedBy { it.start }, slotTimes(school.lessons), events)
+                    items(entries, key = { it.gap?.let { gap -> "gap-${gap.start}" } ?: it.lesson?.id ?: "event-${it.event!!.id}" }) { entry ->
+                        entry.gap?.let { gap -> FreePeriod(gap) { addLesson(gap) } }
+                        entry.lesson?.let { lesson ->
+                            val subject = resolveSubject(lesson, state.rules)
+                            LessonCard(subject.name, lesson.topic, start = lesson.start, end = lesson.end, slot = lesson.slot,
+                                dueHomework = lesson.hasHomework, assignedHomework = lesson.details.any { it.key == "homework_next" } || school.homework.any { it.lessonId == lesson.id },
+                                assessment = lesson.assessment, lessonLabel = lesson.label, important = lesson.important, remark = lesson.note, formatives = lesson.formatives, average = lesson.average, trend = lesson.trend) { openLesson(lesson.id) }
+                        }
+                        entry.event?.let { event ->
+                            LessonCard(event.title, event.note, custom = true, start = event.start, end = event.end, slot = event.slot.takeIf { it > 0 }) { openEvent(event.id) }
+                        }
                     }
                 }
             }
@@ -327,6 +344,11 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
         }
     }
 }
+
+private val pagerEpoch = LocalDate.of(2000, 1, 1)
+private val DAY_PAGES = java.time.temporal.ChronoUnit.DAYS.between(pagerEpoch, LocalDate.of(2100, 1, 1)).toInt()
+private fun dayPage(date: LocalDate) = java.time.temporal.ChronoUnit.DAYS.between(pagerEpoch, date).toInt().coerceIn(0, DAY_PAGES - 1)
+private fun pageDay(page: Int) = pagerEpoch.plusDays(page.toLong())
 
 @Composable
 internal fun TimetableList(isRefreshing: Boolean, onRefresh: () -> Unit, content: LazyListScope.() -> Unit) {
