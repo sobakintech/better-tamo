@@ -124,7 +124,7 @@ private fun NoticeMark(notice: SchoolNotice) {
 
 @Composable
 fun noticeColor(kind: NoticeKind) = when (kind) {
-    NoticeKind.PRAISE -> MaterialTheme.colorScheme.primary
+    NoticeKind.PRAISE -> StatusColors.good
     NoticeKind.REMARK -> MaterialTheme.colorScheme.error
     else -> MaterialTheme.colorScheme.onSurfaceVariant
 }

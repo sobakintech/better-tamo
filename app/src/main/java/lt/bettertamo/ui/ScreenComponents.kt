@@ -103,8 +103,8 @@ fun attendanceLabel(value: String) = value.trim().lowercase().let { code ->
 @Composable
 fun averageColor(value: Double?): Color = when {
     value == null -> MaterialTheme.colorScheme.onSurfaceVariant
-    value >= 8.5 -> MaterialTheme.colorScheme.primary
-    value >= 6.0 -> MaterialTheme.colorScheme.tertiary
+    value >= 8.5 -> StatusColors.good
+    value >= 6.0 -> StatusColors.fair
     else -> MaterialTheme.colorScheme.error
 }
 

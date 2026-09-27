@@ -5,12 +5,16 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -56,6 +60,18 @@ private val type = Typography(
     labelMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp),
 )
 
+private val LocalDarkTheme = staticCompositionLocalOf { false }
+
+// Colours that carry meaning and must not follow the accent.
+object StatusColors {
+    val good: Color @Composable @ReadOnlyComposable get() = if (LocalDarkTheme.current) Color(0xFF8FD6A0) else Color(0xFF237A45)
+    val fair: Color @Composable @ReadOnlyComposable get() = if (LocalDarkTheme.current) Color(0xFFE9C16C) else Color(0xFF8A5F12)
+}
+
+private fun ColorScheme.withStatusColors(dark: Boolean) =
+    if (dark) copy(error = Color(0xFFFF6B6B), onError = Color(0xFF4A0006), errorContainer = Color(0xFF7A1216), onErrorContainer = Color(0xFFFFDAD6))
+    else copy(error = Color(0xFFD01F1F), onError = Color.White, errorContainer = Color(0xFFFFDAD6), onErrorContainer = Color(0xFF5C0008))
+
 @Composable
 fun BetterTamoTheme(theme: String = "system", content: @Composable () -> Unit) {
     val dark = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
@@ -66,5 +82,7 @@ fun BetterTamoTheme(theme: String = "system", content: @Composable () -> Unit) {
         activity?.enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
         onDispose { }
     }
-    MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, typography = type, content = content)
+    CompositionLocalProvider(LocalDarkTheme provides dark) {
+        MaterialTheme(colorScheme = (if (dark) DarkColors else LightColors).withStatusColors(dark), typography = type, content = content)
+    }
 }

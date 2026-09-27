@@ -457,7 +457,7 @@ fun LessonCard(title: String, description: String, custom: Boolean = false, star
                     NoteIcon(remark)
                     if (average.isNotBlank()) Row(Modifier.semantics(mergeDescendants = true) { contentDescription = "Vidurkis $average" + when (trend) { "up" -> ", kyla"; "down" -> ", krenta"; "flat" -> ", nekinta"; else -> "" } }, verticalAlignment = Alignment.CenterVertically) {
                         when (trend) {
-                            "up" -> Icon(Icons.Outlined.ArrowUpward, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                            "up" -> Icon(Icons.Outlined.ArrowUpward, null, Modifier.size(14.dp), tint = StatusColors.good)
                             "down" -> Icon(Icons.Outlined.ArrowDownward, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.error)
                             "flat" -> Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
