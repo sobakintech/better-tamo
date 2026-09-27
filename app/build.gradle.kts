@@ -1,5 +1,5 @@
+import java.time.Instant
 import java.time.ZoneId
-import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 plugins {
@@ -9,7 +9,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
-val buildTime: ZonedDateTime = ZonedDateTime.now(ZoneId.of("Europe/Vilnius"))
+abstract class BuildMinute : ValueSource<Long, ValueSourceParameters.None> {
+    override fun obtain(): Long = System.currentTimeMillis() / 60_000
+}
+
+val buildMinute = providers.of(BuildMinute::class) {}
 val releaseKeystore = providers.environmentVariable("BETTER_TAMO_KEYSTORE").orNull
 
 android {
@@ -20,8 +24,6 @@ android {
         applicationId = "lt.bettertamo"
         minSdk = 26
         targetSdk = 36
-        versionCode = (buildTime.toEpochSecond() / 60).toInt()
-        versionName = buildTime.format(DateTimeFormatter.ofPattern("yyyy.MM.dd.HHmm"))
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     if (releaseKeystore != null) {
@@ -40,6 +42,17 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            output.versionCode.set(buildMinute.map { it.toInt() })
+            output.versionName.set(buildMinute.map {
+                Instant.ofEpochSecond(it * 60).atZone(ZoneId.of("Europe/Vilnius")).format(DateTimeFormatter.ofPattern("yyyy.MM.dd.HHmm"))
+            })
+        }
+    }
 }
 
 dependencies {
