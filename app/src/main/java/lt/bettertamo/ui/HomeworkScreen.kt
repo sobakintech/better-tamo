@@ -32,9 +32,10 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun HomeworkScreen(state: PlannerState, toggle: (String) -> Unit) {
+fun HomeworkScreen(state: PlannerState, toggle: (Homework) -> Unit) {
     val vm = LocalPlanner.current
     val school = LocalSchoolData.current
+    val saving by vm.savingHomework.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
     val errors by vm.readErrors.collectAsStateWithLifecycle()
     var past by rememberSaveable { mutableStateOf(false) }
@@ -104,7 +105,7 @@ fun HomeworkScreen(state: PlannerState, toggle: (String) -> Unit) {
                     items(entries, key = { it.id }) { homework ->
                         val lesson = school.origin(homework.lessonId)
                         val subject = lesson?.let { resolveSubject(it, state.rules).name } ?: homework.subject
-                        HomeworkCard(homework, subject, lesson?.teacher.orEmpty(), completed(homework), if (homework.completed) null else ({ toggle(homework.id) }))
+                        HomeworkCard(homework, subject, lesson?.teacher.orEmpty(), completed(homework), if (homework.lessonId in saving) null else ({ toggle(homework) }))
                     }
                 }
             }
@@ -133,7 +134,7 @@ internal fun DayHeading(date: LocalDate) {
 private fun HomeworkCard(homework: Homework, subject: String, teacher: String, done: Boolean, onToggle: (() -> Unit)?) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)) {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)) {
-            Checkbox(done, onToggle?.let { toggle -> { _: Boolean -> toggle() } }, modifier = Modifier.semantics { contentDescription = if (homework.completed) "Atlikta TAMO: $subject" else "Atlikta šiame įrenginyje: $subject" })
+            Checkbox(done, onToggle?.let { toggle -> { _: Boolean -> toggle() } }, modifier = Modifier.semantics { contentDescription = "Atlikta: $subject" })
             Column(Modifier.weight(1f).padding(top = 12.dp).alpha(if (done) 0.6f else 1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(subject, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     textDecoration = if (done) TextDecoration.LineThrough else null)

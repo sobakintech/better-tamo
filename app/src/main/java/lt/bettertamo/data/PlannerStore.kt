@@ -466,16 +466,59 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         if (header.read) unreadMessages.value += 1
     }
 
-    suspend fun webUrl(target: String): String? {
+    private suspend fun studentSession(): SchoolSession? {
         var account = session.value?.takeIf { it.selectedRole != null } ?: return null
-        if (account.roles.find { it.id == account.selectedRole }?.studentId.isNullOrBlank()) {
-            runCatching { api.roles(account) }.getOrNull()?.takeIf { it.selectedRole == account.selectedRole }?.let { refreshed ->
+        val selected = account.roles.find { it.id == account.selectedRole }
+        if (selected?.studentId.isNullOrBlank()) {
+            val roles = runCatching { api.roles(account).roles }.getOrNull().orEmpty()
+            val studentId = (roles.singleOrNull { it.title == selected?.title && it.subtitle == selected?.subtitle } ?: roles.singleOrNull())?.studentId
+            if (!studentId.isNullOrBlank()) {
+                val refreshed = account.copy(roles = account.roles.map { if (it.id == account.selectedRole) it.copy(studentId = studentId) else it })
                 withContext(Dispatchers.IO) { runCatching { vault.save(refreshed) } }
                 session.value = refreshed
                 account = refreshed
             }
         }
-        return api.webUrl(account, target)
+        return account
+    }
+
+    suspend fun webUrl(target: String): String? = studentSession()?.let { api.webUrl(it, target) }
+
+    val savingHomework = MutableStateFlow(emptySet<String>())
+
+    private fun markHomework(lessonId: String, done: Boolean) {
+        school.value = school.value.copy(homework = school.value.homework.map { if (it.lessonId == lessonId) it.copy(completed = done) else it })
+    }
+
+    fun toggleHomework(work: Homework) {
+        val local = work.id in state.value?.completedHomework.orEmpty()
+        if (session.value?.legacyRole != 2) {
+            update { it.copy(completedHomework = if (local) it.completedHomework - work.id else it.completedHomework + work.id) }
+            return
+        }
+        if (local && !work.completed) {
+            update { it.copy(completedHomework = it.completedHomework - work.id) }
+            return
+        }
+        if (work.lessonId in savingHomework.value) return
+        val done = !work.completed
+        savingHomework.value += work.lessonId
+        markHomework(work.lessonId, done)
+        viewModelScope.launch {
+            try {
+                val account = studentSession() ?: throw TamoFailure("Prisijunkite iš naujo.")
+                val student = account.roles.find { it.id == account.selectedRole }?.studentId.orEmpty()
+                if (student.isBlank()) throw TamoFailure("Šios paskyros namų darbų TAMO pažymėti negalima.")
+                api.setHomeworkDone(account, student, work.lessonId, done)
+                markHomework(work.lessonId, done)
+                if (local) update { it.copy(completedHomework = it.completedHomework - work.id) }
+                persist()
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                markHomework(work.lessonId, !done)
+                error.value = (e as? TamoFailure)?.userMessage ?: "Namų darbo pažymėti nepavyko."
+            } finally { savingHomework.value -= work.lessonId }
+        }
     }
 
     private fun update(transform: (PlannerState) -> PlannerState) {
@@ -510,9 +553,6 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         it.copy(events = it.events.filterNot { saved -> saved.id == event.id } + event)
     }
     fun deleteEvent(id: String) = update { it.copy(events = it.events.filterNot { event -> event.id == id }) }
-    fun toggleHomework(id: String) = update {
-        it.copy(completedHomework = if (id in it.completedHomework) it.completedHomework - id else it.completedHomework + id)
-    }
     fun setAccent(key: String) {
         accent.value = key
         ui.edit { putString("accent", key) }

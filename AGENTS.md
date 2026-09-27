@@ -42,6 +42,8 @@ These differ from, or aren't covered by, the extracted models in the API referen
 - `rightIconsTop/Middle/Bottom` arrive as single objects, not arrays. Event-detail fields are `icon/title/body/label`, not the models' `*Content` names.
 - Calendar events expose `schoolSubjectId` (scopes rename rules) and `eventIcon.content` (lesson ordinal). There is no teacher ID; teacher rules match on the returned name.
 - `GetLessons` has no `id` field; don't treat the legacy `subjectId` as a stable subject ID.
+- Homework ticks sync to TAMO (verified live): `POST core/app/darbai/namu/atlikimas` with form `MokinioId`, `PamokosId` (the homework's `lessonId`) and `Atliktas` (`true`/`false`); TAMO returns it as `completionDate`. `MokinioId` is the student role's `childStudentId` (the role has no `studentId`); the homework item's own `studentId` is the person ID and TAMO rejects it ("nesutampa su prisijungusio mokinio id"). Only student logins (legacy role 2) sync; other roles and older ticks (`completedHomework`) stay device-only.
+- Role `id`s from `core/app/roles` change on every request. Match a refreshed role by title/subtitle and keep the stored `id`, since the session scope (and saved personalization) is keyed by it.
 - Feed items are classified by `eventId` (4 homework, 1 grade, 10 cumulative, 8 praise/remark/comment); unknown entries without text are skipped.
 - Semester data: `GetWindowFilters(windowName=periods,userType=2)` gives `[personId, periodId]` pairs for `GetPeriodAssessments` (annual period ID is 0). Modern `periodsummary` can return empty periods.
 - Some all-day (holiday) events only have a Lithuanian date-range `eventSubtitle`; keep the text when it can't be parsed and never extrapolate holidays into other years.

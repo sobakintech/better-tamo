@@ -132,6 +132,9 @@ class TamoApi {
         return mapper.origins(items)
     }
     suspend fun homework(session: SchoolSession, from: LocalDate, to: LocalDate) = mapper.homework(request("core/app/darbai", session, range(from, to) + ("workType" to "home")))
+    suspend fun setHomeworkDone(session: SchoolSession, studentId: String, lessonId: String, done: Boolean) {
+        request("core/app/darbai/namu/atlikimas", session, form = mapOf("MokinioId" to studentId, "PamokosId" to lessonId, "Atliktas" to done.toString()))
+    }
     suspend fun calendar(session: SchoolSession, month: YearMonth) = mapper.calendar(request("core/app/calendar/events/allDay", session, range(month.atDay(1), month.atEndOfMonth())), month)
     suspend fun badges(session: SchoolSession, month: YearMonth) = mapper.badges(request("core/app/calendar/badges", session, range(month.atDay(1), month.atEndOfMonth())))
     suspend fun diary(session: SchoolSession, from: LocalDate, to: LocalDate) = mapper.diary(request("core/app/dienynas", session, range(from, to)))
