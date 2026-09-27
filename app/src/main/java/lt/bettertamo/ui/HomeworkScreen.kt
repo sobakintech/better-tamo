@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import lt.bettertamo.data.*
 import java.time.LocalDate
@@ -43,7 +42,6 @@ fun HomeworkScreen(state: PlannerState, toggle: (String) -> Unit) {
     var past by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var filter by rememberSaveable { mutableIntStateOf(0) }
-    var expanded by rememberSaveable { mutableStateOf<String?>(null) }
     RefreshOnResume(past) { vm.loadHomework(past) }
     val today = LocalDate.now()
     val from = if (past) today.minusDays(30) else today
@@ -112,8 +110,7 @@ fun HomeworkScreen(state: PlannerState, toggle: (String) -> Unit) {
                     items(entries, key = { it.id }) { homework ->
                         val lesson = school.origin(homework.lessonId)
                         val subject = lesson?.let { resolveSubject(it, state.rules).name } ?: homework.subject
-                        HomeworkCard(homework, subject, lesson?.teacher.orEmpty(), completed(homework), expanded == homework.id,
-                            { expanded = if (expanded == homework.id) null else homework.id }, if (homework.completed) null else ({ toggle(homework.id) }))
+                        HomeworkCard(homework, subject, lesson?.teacher.orEmpty(), completed(homework), if (homework.completed) null else ({ toggle(homework.id) }))
                     }
                 }
             }
@@ -139,19 +136,17 @@ internal fun DayHeading(date: LocalDate) {
 }
 
 @Composable
-private fun HomeworkCard(homework: Homework, subject: String, teacher: String, done: Boolean, expanded: Boolean, onExpand: () -> Unit, onToggle: (() -> Unit)?) {
-    Card(onClick = onExpand, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-        modifier = Modifier.semantics { stateDescription = if (expanded) "Išskleista" else "Suskleista" }) {
+private fun HomeworkCard(homework: Homework, subject: String, teacher: String, done: Boolean, onToggle: (() -> Unit)?) {
+    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)) {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)) {
             Checkbox(done, onToggle?.let { toggle -> { _: Boolean -> toggle() } }, modifier = Modifier.semantics { contentDescription = if (homework.completed) "Atlikta TAMO: $subject" else "Atlikta šiame įrenginyje: $subject" })
             Column(Modifier.weight(1f).padding(top = 12.dp).alpha(if (done) 0.6f else 1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(subject, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     textDecoration = if (done) TextDecoration.LineThrough else null)
-                if (expanded) SelectionContainer { Text(homework.text, style = MaterialTheme.typography.bodyMedium) }
-                else Text(homework.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                SelectionContainer { Text(homework.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 val meta = listOfNotNull(homework.assignedDate?.let { "Užduota ${it.format(DateTimeFormatter.ofPattern("MM.dd"))}" }, teacher.takeIf { it.isNotBlank() })
                 if (meta.isNotEmpty()) Text(meta.joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+                    modifier = Modifier.padding(top = 2.dp))
             }
         }
     }
