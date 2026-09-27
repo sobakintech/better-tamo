@@ -68,17 +68,3 @@ fun BetterTamoTheme(theme: String = "system", content: @Composable () -> Unit) {
     }
     MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, typography = type, content = content)
 }
-
-data class SubjectColors(val ink: Color, val fill: Color)
-val colorNames = listOf("Žalia", "Mėlyna", "Gintarinė", "Rožinė", "Violetinė", "Pilka")
-
-@Composable
-fun subjectColors(index: Int): SubjectColors {
-    val dark = MaterialTheme.colorScheme.background.red < 0.2f
-    val lightInk = listOf(0xFF32613F, 0xFF3C5F91, 0xFF80601E, 0xFF914961, 0xFF715397, 0xFF56615C)
-    val lightFill = listOf(0xFFE5EEDB, 0xFFE4EDF8, 0xFFF7EDCE, 0xFFF6E4E9, 0xFFEDE6F7, 0xFFE7ECE7)
-    val darkInk = listOf(0xFFBFDAAC, 0xFFB9D1F4, 0xFFEED49B, 0xFFF2BACB, 0xFFD8BEF7, 0xFFC8D4CB)
-    val darkFill = listOf(0xFF30432D, 0xFF2C3C53, 0xFF483D24, 0xFF4B2E3A, 0xFF3E3153, 0xFF343F37)
-    val i = index.coerceIn(0, 5)
-    return SubjectColors(Color(if (dark) darkInk[i] else lightInk[i]), Color(if (dark) darkFill[i] else lightFill[i]))
-}

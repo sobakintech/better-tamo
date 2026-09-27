@@ -29,8 +29,8 @@ Follow the official TAMO school diary's structure while using native Compose/Mat
 - Timetable cards show only the lesson's own mark, cumulative circles, remark icon and the lesson-type label (tests highlighted). Missing slots between lessons show a tappable gap row (start time, plus icon, end time; one per missing slot) that opens the event editor prefilled as a numbered lesson. Gap lessons hide on days when TAMO has a real lesson in that slot.
 - Error banners sit above lists (never inside them) so they stay visible with cached content.
 - Subject and semester pages preserve official aggregate meaning. Do not attribute a combined subject's aggregate grades to an individual override without an actual record link.
-- Custom events use normal lesson-card styling with a small calendar icon before the title (no text label). A weekly event hides on days when TAMO has an overlapping lesson with the same name (gap lessons: any lesson in that slot/time). Their editor and recurring rename rules live under Daugiau → Mano pamokos. No general timetable add-event button; adding happens from gap rows or Mano pamokos.
-- Rename by recurring weekday/slot or subject plus teacher; no one-time-date rules. Resolve homework using its originating lesson, never its due date.
+- Custom events use normal lesson-card styling with a small calendar icon before the title (no text label, no colours). A weekly event hides on days when TAMO has an overlapping lesson with the same name (gap lessons: any lesson in that slot/time). Their editor and recurring rename rules live under Daugiau → Mano pamokos. No general timetable add-event button; adding happens from gap rows or Mano pamokos.
+- Rename by recurring weekday/slot or subject plus teacher; no one-time-date rules and no subject colours. Resolve homework using its originating lesson, never its due date.
 - Keep light, dark and system themes. Retain native touch targets and readable text scaling. The palette stays green.
 - No temporary/sample notices in product screens. Sign-in has no decorative icon, and both headings are centered.
 

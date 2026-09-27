@@ -53,7 +53,7 @@ class TamoMapperTest {
         val work = mapper.homework(json("""{"items":[{"lessonId":41,"date":"2026-09-07","deadline":"2026-09-09","homeWork":"Read chapter 1","thingName":"Gamtos mokslai","completionDate":null}]}""")).single()
         val monday = Lesson("41", "science", "Gamtos mokslai", "teacher", "Teacher A", 1, 2, "")
         val wednesday = monday.copy(id = "99", weekday = 3)
-        val rules = listOf(LessonRule("bio", "science", "Biologija", 0, MatchMode.SLOTS, setOf("1:2")), LessonRule("chem", "science", "Chemija", 1, MatchMode.SLOTS, setOf("3:2")))
+        val rules = listOf(LessonRule("bio", "science", "Biologija", MatchMode.SLOTS, setOf("1:2")), LessonRule("chem", "science", "Chemija", MatchMode.SLOTS, setOf("3:2")))
         val data = SchoolData(lessons = listOf(monday, wednesday), homework = listOf(work))
         assertEquals(LocalDate.of(2026, 9, 9), work.dueDate)
         assertEquals("Biologija", resolveSubject(data.origin(work.lessonId)!!, rules).name)

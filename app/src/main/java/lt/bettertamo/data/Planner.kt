@@ -67,7 +67,6 @@ data class LessonRule(
     val id: String,
     val subjectId: String,
     val name: String,
-    val color: Int,
     val mode: MatchMode,
     val slots: Set<String> = emptySet(),
     val teacherId: String = "",
@@ -87,7 +86,6 @@ data class CustomEvent(
     val end: String,
     val room: String = "",
     val note: String = "",
-    val color: Int = 4,
     val slot: Int = 0,
 )
 
@@ -116,12 +114,12 @@ fun validRule(rule: LessonRule): Boolean = rule.name.isNotBlank() && rule.subjec
     }
 }
 
-data class ResolvedSubject(val name: String, val color: Int, val rule: LessonRule?)
+data class ResolvedSubject(val name: String, val rule: LessonRule?)
 
 fun resolveSubject(lesson: Lesson, rules: List<LessonRule>): ResolvedSubject {
     val rule = rules.lastOrNull { it.mode == MatchMode.SLOTS && it.matches(lesson) }
         ?: rules.lastOrNull { it.mode == MatchMode.TEACHER && it.matches(lesson) }
-    return ResolvedSubject(rule?.name ?: lesson.subject, rule?.color ?: defaultColor(lesson.subjectId), rule)
+    return ResolvedSubject(rule?.name ?: lesson.subject, rule)
 }
 
 fun ruleConflict(candidate: LessonRule, rules: List<LessonRule>): Boolean = rules.any {
@@ -154,13 +152,3 @@ fun mondayOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousO
 val dayShort = listOf("Pr", "An", "Tr", "Kt", "Pn", "Št", "Sk")
 val dayLong = listOf("Pirmadienis", "Antradienis", "Trečiadienis", "Ketvirtadienis", "Penktadienis", "Šeštadienis", "Sekmadienis")
 val bellTimes = listOf("08:10" to "08:55", "09:05" to "09:50", "10:00" to "10:45", "11:15" to "12:00", "12:25" to "13:10", "13:20" to "14:05", "14:15" to "15:00")
-
-private fun defaultColor(subjectId: String): Int = when (subjectId) {
-    "science" -> 0
-    "lithuanian" -> 3
-    "math" -> 1
-    "geography", "history" -> 2
-    "english", "media" -> 4
-    else -> 5
-}
-

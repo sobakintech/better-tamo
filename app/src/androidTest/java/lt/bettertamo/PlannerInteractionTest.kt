@@ -93,7 +93,7 @@ class PlannerInteractionTest {
 
     @Test fun renameEditorUsesSavedSourcesWhenCurrentWeekIsEmpty() {
         val lesson = Lesson("old", "science", "Gamtos mokslai", "teacher", "Mokytoja", 1, 2, "")
-        val existing = LessonRule("rule", "science", "Biologija", 0, MatchMode.TEACHER, teacherId = "teacher")
+        val existing = LessonRule("rule", "science", "Biologija", MatchMode.TEACHER, teacherId = "teacher")
         var saved: LessonRule? = null
         compose.setContent {
             BetterTamoTheme {

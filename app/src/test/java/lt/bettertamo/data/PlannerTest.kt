@@ -31,7 +31,7 @@ class PlannerTest {
     }
 
     @Test fun `slot rule overrides teacher rule regardless of insertion order`() {
-        val slotRule = LessonRule("specific", "science", "Pasirinkta pamoka", 4, MatchMode.SLOTS, setOf(biology.slotKey))
+        val slotRule = LessonRule("specific", "science", "Pasirinkta pamoka", MatchMode.SLOTS, setOf(biology.slotKey))
         val rules = listOf(slotRule) + DemoData.initialState.rules
         assertEquals("Pasirinkta pamoka", resolveSubject(biology, rules).name)
         assertEquals("Chemija", resolveSubject(chemistry, rules).name)
@@ -77,7 +77,7 @@ class PlannerTest {
     }
 
     @Test fun `missing teacher and unknown lesson slot cannot create broad renames`() {
-        val teacherRule = LessonRule("test", "science", "Biologija", 0, MatchMode.TEACHER)
+        val teacherRule = LessonRule("test", "science", "Biologija", MatchMode.TEACHER)
         assertFalse(validRule(teacherRule))
         assertFalse(teacherRule.matches(biology.copy(teacherId = "")))
         assertFalse(validRule(teacherRule.copy(mode = MatchMode.SLOTS, slots = setOf("1:0"))))

@@ -55,11 +55,11 @@ object DemoData {
     )
     val initialState = PlannerState(
         rules = listOf(
-            LessonRule("demo-bio", "science", "Biologija", 0, MatchMode.TEACHER, teacherId = "bio-teacher"),
-            LessonRule("demo-physics", "science", "Fizika", 1, MatchMode.TEACHER, teacherId = "physics-teacher"),
-            LessonRule("demo-chem", "science", "Chemija", 2, MatchMode.TEACHER, teacherId = "chem-teacher"),
-            LessonRule("demo-grammar", "lithuanian", "Gramatika", 3, MatchMode.SLOTS, setOf("1:3", "3:3", "4:3")),
-            LessonRule("demo-literature", "lithuanian", "Literatūra", 4, MatchMode.SLOTS, setOf("2:1", "5:6")),
+            LessonRule("demo-bio", "science", "Biologija", MatchMode.TEACHER, teacherId = "bio-teacher"),
+            LessonRule("demo-physics", "science", "Fizika", MatchMode.TEACHER, teacherId = "physics-teacher"),
+            LessonRule("demo-chem", "science", "Chemija", MatchMode.TEACHER, teacherId = "chem-teacher"),
+            LessonRule("demo-grammar", "lithuanian", "Gramatika", MatchMode.SLOTS, setOf("1:3", "3:3", "4:3")),
+            LessonRule("demo-literature", "lithuanian", "Literatūra", MatchMode.SLOTS, setOf("2:1", "5:6")),
         ),
         events = listOf(CustomEvent("demo-class", "Klasės valandėlė", setOf(1, 4), "15:10", "15:55", "305", "Savaitės planai ir klasės reikalai.")),
         completedHomework = setOf("hw-grammar"),

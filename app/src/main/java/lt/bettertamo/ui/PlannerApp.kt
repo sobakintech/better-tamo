@@ -505,10 +505,8 @@ internal fun PersonalizationScreen(state: PlannerState, onRule: (LessonRule) -> 
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(subject.subject, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
                             rules.forEach { rule ->
-                                val colors = subjectColors(rule.color)
                                 Surface(onClick = { onRule(rule) }, shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerLowest) {
                                     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        Box(Modifier.size(10.dp).background(colors.ink, CircleShape))
                                         Column(Modifier.weight(1f)) {
                                             Text(rule.name, style = MaterialTheme.typography.titleMedium)
                                             Text(ruleSummary(rule, sources), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
