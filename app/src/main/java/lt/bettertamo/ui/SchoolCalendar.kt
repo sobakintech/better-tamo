@@ -62,7 +62,8 @@ fun TimetableMonthHeader(month: YearMonth, expanded: Boolean, onToggle: () -> Un
 
 @Composable
 fun TimetableWeekStrip(date: LocalDate, onDate: (LocalDate) -> Unit) {
-    val badges = LocalSchoolData.current.badges
+    val school = LocalSchoolData.current
+    val badges = school.badges
     val today = LocalDate.now()
     Row(Modifier.fillMaxWidth().calendarSwipe(date, { onDate(date.minusWeeks(1)) }, { onDate(date.plusWeeks(1)) }).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         val monday = mondayOf(date)
@@ -71,6 +72,9 @@ fun TimetableWeekStrip(date: LocalDate, onDate: (LocalDate) -> Unit) {
             val isSelected = day == date
             val isToday = day == today
             val ink = if (index >= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer
+            val hasTest = school.lessons.any { it.date == day && it.important }
+            val dots = badges[day].orEmpty().map { if ("homework" in it) MaterialTheme.colorScheme.tertiary else ink }.toMutableList()
+            if (hasTest) dots.indexOf(ink).let { if (it >= 0) dots[it] = MaterialTheme.colorScheme.error else dots.add(0, MaterialTheme.colorScheme.error) }
             Surface(
                 onClick = { onDate(day) },
                 modifier = Modifier.weight(1f).semantics {
@@ -79,6 +83,7 @@ fun TimetableWeekStrip(date: LocalDate, onDate: (LocalDate) -> Unit) {
                     stateDescription = listOfNotNull(
                         "Šiandien".takeIf { isToday },
                         "Yra dienyno įrašų".takeIf { badges[day].orEmpty().isNotEmpty() },
+                        "Yra atsiskaitymų".takeIf { hasTest },
                     ).joinToString(", ")
                 },
                 shape = RoundedCornerShape(12.dp),
@@ -90,8 +95,8 @@ fun TimetableWeekStrip(date: LocalDate, onDate: (LocalDate) -> Unit) {
                 Column(Modifier.padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(day.dayOfMonth.toString(), style = MaterialTheme.typography.titleLarge)
                     Text(dayShort[index], style = MaterialTheme.typography.labelMedium)
-                    if (badges[day].orEmpty().isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(top = 3.dp)) {
-                        badges[day].orEmpty().take(3).forEach { badge -> Box(Modifier.size(4.dp).background(if ("homework" in badge) MaterialTheme.colorScheme.tertiary else ink, RoundedCornerShape(2.dp))) }
+                    if (dots.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(top = 3.dp)) {
+                        dots.take(3).forEach { color -> Box(Modifier.size(4.dp).background(color, RoundedCornerShape(2.dp))) }
                     } else Spacer(Modifier.height(7.dp))
                     Spacer(Modifier.height(6.dp))
                     Box(Modifier.fillMaxWidth(0.7f).height(3.dp).background(if (isSelected) ink else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(2.dp)))
