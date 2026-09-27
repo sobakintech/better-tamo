@@ -52,7 +52,7 @@ Open it with the profile button on any tab.
 - TAMO's extra pages, such as Analitika, shown in-app.
 - **Mano pamokos**: rename recurring lessons (by weekday and slot, or by subject and teacher) and add your own weekly events.
 - Role switching for accounts with several roles (e.g. parents with multiple children).
-- Notifications, light/dark/system theme, and sign-out.
+- Notifications, light/dark/system theme, in-app updates, a link to this repository, and sign-out.
 
 ### Everywhere
 - **Works offline.** The last loaded data is cached encrypted on the device, so the app opens instantly and stays readable without a connection.

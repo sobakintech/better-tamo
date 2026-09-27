@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.EventNote
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -25,7 +26,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +78,7 @@ fun MoreScreen(back: () -> Unit, open: (String) -> Unit) {
     val changingAccount by vm.changingAccount.collectAsStateWithLifecycle()
     var signOut by remember { mutableStateOf(false) }
     var switchAccount by remember { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
     RefreshOnResume(Unit) { vm.loadMenu() }
     val role = account?.roles?.firstOrNull { it.id == account?.selectedRole }
     Column(Modifier.fillMaxSize()) {
@@ -127,6 +131,8 @@ fun MoreScreen(back: () -> Unit, open: (String) -> Unit) {
                 MenuGroup("Apie") {
                     MenuRow(Icons.Outlined.Info, "Better TAMO", subtitle = lt.bettertamo.BuildConfig.VERSION_NAME, onClick = null)
                     UpdateSetting()
+                    MenuRow(ImageVector.vectorResource(lt.bettertamo.R.drawable.ic_github), "GitHub", subtitle = AppUpdater.REPOSITORY.removePrefix("https://github.com/"), onClick = { uriHandler.openUri(AppUpdater.REPOSITORY) },
+                        trailing = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) })
                 }
             }
             item {
