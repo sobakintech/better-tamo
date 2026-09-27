@@ -51,14 +51,14 @@ jobs:
         run: |
           apk=app/build/outputs/apk/release/app-release.apk
           version=$("$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$apk" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
-          cp "$apk" "better-tamo-$version.apk"
+          cp "$apk" better-tamo.apk
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v$VERSION" "better-tamo-$VERSION.apk" \
+          gh release create "v$VERSION" better-tamo.apk \
             --target "$GITHUB_SHA" \
             --title "$VERSION" \
             --generate-notes
