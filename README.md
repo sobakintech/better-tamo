@@ -13,6 +13,8 @@ Better TAMO covers the school-diary parts of the official app: timetable, homewo
 
 Get the latest APK from [**Releases**](https://github.com/sobakintech/better-tamo/releases/latest) and install it on Android 8.0 or newer. Better TAMO installs as `lt.bettertamo`, so it runs alongside the official app.
 
+After that, the app checks GitHub for new releases when it opens and offers to download and install them itself. You can also check from **Daugiau → Atnaujinimai**.
+
 You'll probably need an active **TAMO IŠMANIEMS** subscription. The official app gates diary, grade, homework and calendar access behind it, and Better TAMO has only been tested with premium enabled. For details, see [the premium notes](https://github.com/sobakintech/tamo-dienynas-api/blob/main/docs/premium.md).
 
 ## Features
@@ -61,7 +63,7 @@ Open it with the profile button on any tab.
 
 - Your password is never stored. After sign-in, only the session is kept, encrypted with the Android Keystore.
 - Cached school data is also Keystore-encrypted and excluded from backups and device transfers.
-- There are no analytics or trackers. The app only talks to TAMO, plus Google's Firebase Cloud Messaging if you turn on notifications.
+- There are no analytics or trackers. The app only talks to TAMO, GitHub (to check for and download updates), and Google's Firebase Cloud Messaging if you turn on notifications.
 - Homework checkmarks, lesson renames and custom events stay on your device.
 - The app only changes things in your TAMO account when you do something that changes them in the official app too: opening a message marks it as read, starring or marking a message unread, sending through TAMO's composer, and registering or removing this device for notifications.
 - Signing out deletes the session, the cache, the push registration and in-app web cookies.

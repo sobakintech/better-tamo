@@ -102,6 +102,7 @@ fun PlannerApp(vm: PlannerViewModel) {
             title = { Text("Nepavyko atlikti veiksmo") }, text = { Text(error!!) },
             confirmButton = { TextButton(onClick = { vm.error.value = null }) { Text("Gerai") } },
         )
+        if (data != null && ready) AppUpdatePrompt()
     }
 }
 

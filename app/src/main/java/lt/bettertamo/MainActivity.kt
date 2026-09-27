@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.graphics.drawable.toDrawable
+import lt.bettertamo.data.AppUpdater
 import lt.bettertamo.data.PlannerViewModel
 import lt.bettertamo.data.TamoPush
 import lt.bettertamo.ui.PlannerApp
@@ -39,6 +40,10 @@ class MainActivity : ComponentActivity() {
             vm.openTab.value = 3
             intent.removeExtra(OPEN_MESSAGES)
         }
+        if (BuildConfig.DEBUG && intent?.getBooleanExtra(DEBUG_UPDATE_PROMPT, false) == true) {
+            AppUpdater.check(this, manual = true, force = true)
+            intent.removeExtra(DEBUG_UPDATE_PROMPT)
+        }
         TamoPush.destination(intent?.extras)?.let {
             vm.openTab.value = it
             intent?.removeExtra(TamoPush.EXTRA)
@@ -46,5 +51,5 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    companion object { const val OPEN_FEED = "open_feed"; const val OPEN_MESSAGES = "open_messages" }
+    companion object { const val OPEN_FEED = "open_feed"; const val OPEN_MESSAGES = "open_messages"; const val DEBUG_UPDATE_PROMPT = "debug_update_prompt" }
 }

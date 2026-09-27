@@ -126,6 +126,7 @@ fun MoreScreen(back: () -> Unit, open: (String) -> Unit) {
             item {
                 MenuGroup("Apie") {
                     MenuRow(Icons.Outlined.Info, "Better TAMO", subtitle = lt.bettertamo.BuildConfig.VERSION_NAME, onClick = null)
+                    UpdateSetting()
                 }
             }
             item {
@@ -163,6 +164,21 @@ private fun ThemeSetting(theme: String, setTheme: (String) -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun UpdateSetting() {
+    val context = LocalContext.current
+    val update by AppUpdater.state.collectAsStateWithLifecycle()
+    val busy = update is AppUpdate.Checking || update is AppUpdate.Downloading || update is AppUpdate.Confirm || update is AppUpdate.Installing
+    MenuRow(Icons.Outlined.Update, "Atnaujinimai", subtitle = updateSummary(update), tint = if (update is AppUpdate.Available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = {
+            when {
+                busy -> AppUpdater.dialog.value = update !is AppUpdate.Checking
+                update is AppUpdate.Available || (update as? AppUpdate.Failed)?.release != null -> AppUpdater.dialog.value = true
+                else -> AppUpdater.check(context, manual = true)
+            }
+        }, trailing = { if (update is AppUpdate.Checking) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) })
 }
 
 @Composable
