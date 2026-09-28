@@ -77,6 +77,13 @@ class TamoMapperTest {
         assertTrue(validHeader("returned-role-id"))
     }
 
+    @Test fun placeholderHomeworkIsSkipped() {
+        val items = listOf("-", " – ", "...", "x", "7 pratimas").mapIndexed { index, text -> """{"lessonId":${index + 1},"date":"2026-09-07","deadline":"2026-09-09","homeWork":"$text","thingName":"Dailė"}""" }
+        assertEquals(listOf("7 pratimas"), mapper.homework(json("""{"items":[${items.joinToString(",")}]}""")).map { it.text })
+        val payload = json("""{"days":[{"date":"2026-09-08","events":[{"id":41,"eventTitle":{"content":"Dailė"},"eventDetails":[{"key":"homework","title":{"content":"Namų darbas"},"body":{"content":"-"}}]}]}]}""")
+        assertFalse(mapper.week(payload, emptyList()).single().hasHomework)
+    }
+
     @Test fun calendarUsesLiveFieldAliasesAndStableSubjectId() {
         val payload = json("""{"days":[{"date":"2026-09-08","events":[{"id":41,"schoolSubjectId":88,"sid":"returned-sid","eventIcon":{"content":"6"},"eventTitle":{"content":"Dailė"},"eventSubtitle":{"content":"Mokytoja"},"eventDetails":[{"key":"homework","title":{"content":"Namų darbas"},"body":{"content":"Atsinešti popieriaus"},"label":{"content":"Užduota 09.01"}}]}]}]}""")
         val lesson = mapper.week(payload, emptyList()).single()

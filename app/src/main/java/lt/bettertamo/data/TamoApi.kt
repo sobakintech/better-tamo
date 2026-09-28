@@ -304,6 +304,7 @@ class TamoMapper(private val text: (String) -> String = { it }) {
                     file.string("fileSid").takeIf { it.isNotBlank() }?.let { SchoolFile(it, text(file.string("content"))) }
                 }, detail.string("key"), content(detail, "iconContent"), content(detail, "labelContent").takeIf { title.isNotBlank() }.orEmpty())
             }.filter { it.title.isNotBlank() || it.text.isNotBlank() || it.files.isNotEmpty() }
+                .filterNot { it.key.startsWith("homework") && it.files.isEmpty() && isPlaceholderHomework(it.text) }
             val formativeKey = event.obj("references").string("formatives")
             val formatives = (event.list("formatives") + payload.list("formatives").filter { formativeKey.isNotBlank() && it.string("key") == formativeKey }.flatMap { it.list("items") }
                 .filter { it.string("lessonId") == event.string("id") }).distinctBy { listOf(it.string("date"), it.string("type"), it.string("title")) }
@@ -330,7 +331,7 @@ class TamoMapper(private val text: (String) -> String = { it }) {
         }
     }.distinctBy { it.id }
 
-    fun homework(payload: JsonObject): List<Homework> = payload.requiredList("items").map { item ->
+    fun homework(payload: JsonObject): List<Homework> = payload.requiredList("items").filterNot { isPlaceholderHomework(text(it.string("homeWork"))) }.map { item ->
         val due = date(item.string("deadline")) ?: throw TamoFailure("Neatpažinta namų darbo data.")
         val assigned = date(item.string("date"))
         val id = item.string("lessonId")
@@ -401,7 +402,7 @@ class TamoMapper(private val text: (String) -> String = { it }) {
             val subject = field("ThingName")
             val lessonDate = date(field("Date"))
             when (item.string("eventId")) {
-                "4" -> SchoolNotice(id, day, subject, field("HomeWork").ifBlank { field("Description") }, deadline = date(field("Deadline")), kind = NoticeKind.HOMEWORK, lessonDate = lessonDate)
+                "4" -> field("HomeWork").ifBlank { field("Description") }.takeUnless(::isPlaceholderHomework)?.let { SchoolNotice(id, day, subject, it, deadline = date(field("Deadline")), kind = NoticeKind.HOMEWORK, lessonDate = lessonDate) }
                 "1" -> field("Value").takeIf { it.isNotBlank() }?.let { SchoolNotice(id, day, subject, "", kind = NoticeKind.GRADE, value = it, lessonDate = lessonDate) }
                 "10" -> field("Vertinimas").takeIf { it.isNotBlank() }?.let { SchoolNotice(id, day, subject, field("Tipas"), kind = NoticeKind.FORMATIVE, value = it, lessonDate = lessonDate) }
                 "8" -> SchoolNotice(id, day, subject, field("Value"), kind = remarkKind(field("Type")), value = field("Type"), lessonDate = lessonDate)

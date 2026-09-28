@@ -55,6 +55,8 @@ data class Homework(
     val completed: Boolean = false,
 )
 
+fun isPlaceholderHomework(text: String): Boolean = text.trim().let { it.length <= 1 || it.none(Char::isLetterOrDigit) }
+
 @Serializable
 data class LessonDetail(val title: String, val text: String, val files: List<SchoolFile> = emptyList(), val key: String = "", val badge: String = "", val label: String = "")
 @Serializable
