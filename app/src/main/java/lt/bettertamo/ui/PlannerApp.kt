@@ -295,13 +295,14 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
             if (kotlin.math.abs(pager.currentPage - target) <= 7) pager.animateScrollToPage(target) else pager.scrollToPage(target)
         }
     }
+    val shownDate by remember { derivedStateOf { pageDay(pager.targetPage) } }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val panelHeight = maxHeight * 0.86f
         Column {
             Surface(color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
                 Column {
-                    TimetableMonthHeader(YearMonth.from(date), false, { monthText = YearMonth.from(date).toString(); expanded = true }, { selectDate(date.minusWeeks(1)) }, { selectDate(date.plusWeeks(1)) }, { selectDate(LocalDate.now()) }) { KeepScreenOnButton(); ProfileButton() }
-                    TimetableWeekStrip(date, selectDate)
+                    TimetableMonthHeader(YearMonth.from(shownDate), false, { monthText = YearMonth.from(shownDate).toString(); expanded = true }, { selectDate(shownDate.minusWeeks(1)) }, { selectDate(shownDate.plusWeeks(1)) }, { selectDate(LocalDate.now()) }) { KeepScreenOnButton(); ProfileButton() }
+                    TimetableWeekStrip(shownDate, selectDate)
                 }
             }
             if ("week" in readErrors) ReadStatus("week", showProgress = false) { vm.loadWeek(date, true) }
