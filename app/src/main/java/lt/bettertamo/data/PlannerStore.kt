@@ -496,11 +496,11 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
             update { it.copy(completedHomework = if (local) it.completedHomework - work.id else it.completedHomework + work.id) }
             return
         }
+        if (work.lessonId in savingHomework.value) return
         if (local && !work.completed) {
             update { it.copy(completedHomework = it.completedHomework - work.id) }
             return
         }
-        if (work.lessonId in savingHomework.value) return
         val done = !work.completed
         savingHomework.value += work.lessonId
         markHomework(work.lessonId, done)
