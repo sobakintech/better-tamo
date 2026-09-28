@@ -51,14 +51,17 @@ class ExtrasShapeTest {
         val received = mapper.messageHeaders(items("""[
             {"id":1,"sid":"1::2::x","messageTypeId":1,"subject":"Konsultacija","date":"2026-09-18T10:00:00.1234567","senderPerson":"Viktorija","senderPersonTitle":"Mokytojas","senderAvatar":"VG","senderAvatarType":"text","readDate":null,"isStarred":true,"isImportant":true,"hasAttachments":true},
             {"id":2,"sid":"2::3::y","messageTypeId":1,"subject":"Sistema","senderPerson":"TAMO","senderAvatar":"https://x/owl.png","senderAvatarType":"image","readDate":"2026-09-17T09:00:00"},
+            {"id":5,"sid":"5::6::w","subject":"Apsauga","senderPerson":"TAMO","senderAvatar":"https://content.tamo.lt/images/tamo.svg","senderAvatarType":"url"},
             {"id":3,"subject":"Be sid"}
         ]"""), sent = false)
-        assertEquals(2, received.size)
+        assertEquals(3, received.size)
         assertFalse(received[0].read)
         assertTrue(received[0].starred && received[0].important && received[0].attachments)
         assertEquals("VG", received[0].avatar)
         assertEquals("", received[1].avatar)
         assertTrue(received[1].read)
+        assertFalse(received[0].tamoLogo || received[1].tamoLogo)
+        assertTrue(received[2].tamoLogo)
         val sent = mapper.messageHeaders(items("""[{"id":4,"sid":"4::z","subject":"Pažymiai","senderAvatar":"IB","recipientSets":[{"title":"Mano mokytojai > Auksė"}],"recipientCount":1,"readCount":1}]"""), sent = true).single()
         assertEquals("Auksė", sent.person)
         assertEquals("", sent.avatar)

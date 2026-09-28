@@ -253,7 +253,8 @@ class TamoMapper(private val text: (String) -> String = { it }) {
             if (sent) "" else text(item.string("senderPersonTitle")), text(item.string("senderAvatar")).takeIf { !sent && item.string("senderAvatarType").let { type -> type.isBlank() || type == "text" } && it.length <= 3 }.orEmpty(),
             sent || item.string("readDate").isNotBlank(), item["isStarred"] == JsonPrimitive(true), item["isImportant"] == JsonPrimitive(true),
             item["hasAttachments"] == JsonPrimitive(true), sent, item.string("replyModeId").toIntOrNull() ?: 0,
-            if (sent) item.string("readCount").toIntOrNull() else null, if (sent) item.string("recipientCount").toIntOrNull() else null)
+            if (sent) item.string("readCount").toIntOrNull() else null, if (sent) item.string("recipientCount").toIntOrNull() else null,
+            !sent && item.string("senderAvatarType") == "url" && item.string("senderAvatar").substringBefore('?').endsWith("/tamo.svg"))
     }
 
     fun messageDetail(payload: JsonObject, header: MessageHeader): MessageDetail {

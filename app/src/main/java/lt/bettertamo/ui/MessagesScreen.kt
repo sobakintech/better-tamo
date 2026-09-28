@@ -2,6 +2,7 @@
 
 package lt.bettertamo.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -65,7 +67,8 @@ private fun messageDate(value: LocalDateTime?): String {
 }
 
 @Composable
-private fun Avatar(text: String, highlighted: Boolean, size: androidx.compose.ui.unit.Dp = 40.dp) {
+private fun Avatar(text: String, highlighted: Boolean, size: androidx.compose.ui.unit.Dp = 40.dp, tamoLogo: Boolean = false) {
+    if (tamoLogo) return Image(painterResource(lt.bettertamo.R.drawable.ic_tamo_logo), "TAMO", Modifier.size(size))
     Surface(shape = CircleShape, color = if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
         contentColor = if (highlighted) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(size)) {
         Box(contentAlignment = Alignment.Center) { Text(text.take(2).uppercase().ifBlank { "T" }, style = MaterialTheme.typography.labelLarge) }
@@ -155,7 +158,7 @@ private fun MessageRow(header: MessageHeader, onClick: () -> Unit, onStar: () ->
     val unread = !header.read
     Card(onClick = onClick, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (unread) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surfaceContainerLowest)) {
         Row(Modifier.fillMaxWidth().padding(start = 14.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Avatar(header.avatar.ifBlank { header.person.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1) } }, unread)
+            Avatar(header.avatar.ifBlank { header.person.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1) } }, unread, tamoLogo = header.tamoLogo)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(header.person, style = MaterialTheme.typography.titleSmall.copy(fontWeight = if (unread) FontWeight.Bold else FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -208,7 +211,7 @@ fun MessageScreen(sid: String, back: () -> Unit, open: (String) -> Unit) {
             }
             Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLowest) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Avatar(header.avatar, false)
+                    Avatar(header.avatar, false, tamoLogo = header.tamoLogo)
                     Column(Modifier.weight(1f)) {
                         Text(if (header.sent) "Kam: ${header.person}" else header.person, style = MaterialTheme.typography.titleSmall)
                         if (header.personTitle.isNotBlank()) Text(header.personTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

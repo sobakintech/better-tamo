@@ -95,5 +95,6 @@ data class MenuLink(val id: String, val group: String, val title: String, val ur
 
 enum class MessageFolder(val title: String) { RECEIVED("Gauti"), STARRED("Pažymėti"), SENT("Išsiųsti"), GROUP("Grupių"), DELETED("Ištrinti") }
 data class MessageHeader(val id: String, val sid: String, val typeId: String, val subject: String, val date: java.time.LocalDateTime?, val person: String, val personTitle: String, val avatar: String,
-                         val read: Boolean, val starred: Boolean, val important: Boolean, val attachments: Boolean, val sent: Boolean, val replyMode: Int = 0, val readCount: Int? = null, val recipientCount: Int? = null)
+                         val read: Boolean, val starred: Boolean, val important: Boolean, val attachments: Boolean, val sent: Boolean, val replyMode: Int = 0, val readCount: Int? = null, val recipientCount: Int? = null,
+                         val tamoLogo: Boolean = false)
 data class MessageDetail(val header: MessageHeader, val body: String, val files: List<SchoolFile>, val recipients: List<String>, val recipientCount: Int?)
