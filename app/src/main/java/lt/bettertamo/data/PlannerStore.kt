@@ -443,27 +443,43 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private fun changeMessage(sid: String, transform: (MessageHeader) -> MessageHeader, call: suspend (SchoolSession) -> Unit) {
+    private fun changeMessages(sids: Set<String>, transform: (MessageHeader) -> MessageHeader?, refreshUnread: Boolean = false, call: suspend (SchoolSession) -> Unit) {
         val account = session.value?.takeIf { it.selectedRole != null } ?: return
         val before = messages.value
         val detail = message.value
-        messages.value = before.map { if (it.sid == sid) transform(it) else it }
-        if (detail?.header?.sid == sid) message.value = detail.copy(header = transform(detail.header))
+        messages.value = before.mapNotNull { if (it.sid in sids) transform(it) else it }
+        if (detail != null && detail.header.sid in sids) transform(detail.header)?.let { message.value = detail.copy(header = it) }
         viewModelScope.launch {
-            try { call(account) }
+            try {
+                call(account)
+                if (refreshUnread) loadUnread(force = true)
+            }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 messages.value = before
-                if (detail?.header?.sid == sid) message.value = detail
+                message.value = detail
                 error.value = (e as? TamoFailure)?.userMessage ?: "Pakeitimo išsaugoti nepavyko."
             }
         }
     }
 
-    fun starMessage(header: MessageHeader) = changeMessage(header.sid, { it.copy(starred = !header.starred) }) { api.starMessage(it, header.sid, !header.starred) }
-    fun markUnread(header: MessageHeader) {
-        changeMessage(header.sid, { it.copy(read = false) }) { api.markUnread(it, header.sid) }
-        if (header.read) unreadMessages.value += 1
+    fun starMessage(header: MessageHeader) = changeMessages(setOf(header.sid), { it.copy(starred = !header.starred) }) { api.starMessage(it, header.sid, !header.starred) }
+    fun markUnread(header: MessageHeader) = markMessages(listOf(header), read = false)
+    fun markMessages(headers: List<MessageHeader>, read: Boolean) {
+        val sids = headers.filter { !it.sent && it.read != read }.map { it.sid }.ifEmpty { return }
+        changeMessages(sids.toSet(), { it.copy(read = read) }, refreshUnread = true) { if (read) api.markRead(it, sids) else api.markUnread(it, sids) }
+    }
+    fun deleteMessages(headers: List<MessageHeader>) {
+        val (sent, received) = headers.filter { it.closable && !it.deleted }.partition { it.sent }
+        if (sent.isEmpty() && received.isEmpty()) return
+        changeMessages((sent + received).map { it.sid }.toSet(), { null }, refreshUnread = received.isNotEmpty()) { account ->
+            if (received.isNotEmpty()) api.deleteMessages(account, received.map { it.sid })
+            sent.forEach { api.deleteSentMessage(account, it.sid) }
+        }
+    }
+    fun restoreMessages(headers: List<MessageHeader>) {
+        val sids = headers.filter { it.deleted }.map { it.sid }.ifEmpty { return }
+        changeMessages(sids.toSet(), { null }, refreshUnread = true) { api.restoreMessages(it, sids) }
     }
 
     private suspend fun studentSession(): SchoolSession? {

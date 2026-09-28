@@ -182,7 +182,7 @@ class TamoApi {
             }
         }
         val path = when (folder) { MessageFolder.SENT -> "messaging/messages/sent"; MessageFolder.GROUP -> "messaging/messages/group/received"; else -> "messaging/messages/received" }
-        return mapper.messageHeaders(request(path, session, query, envelope = false).list("items"), folder == MessageFolder.SENT)
+        return mapper.messageHeaders(request(path, session, query, envelope = false).list("items"), folder == MessageFolder.SENT, folder == MessageFolder.DELETED)
     }
     suspend fun message(session: SchoolSession, header: MessageHeader): MessageDetail {
         val path = if (header.sent) "messaging/messages/sent/${header.id}" else "messaging/messages/received/${header.typeId}/${header.id}"
@@ -191,8 +191,15 @@ class TamoApi {
     suspend fun starMessage(session: SchoolSession, sid: String, starred: Boolean) {
         request("messaging/messages/received/star", session, body = buildJsonObject { put("sid", sid); put("isStarred", starred) }, envelope = false)
     }
-    suspend fun markUnread(session: SchoolSession, sid: String) {
-        request("messaging/messages/received/unread", session, body = buildJsonObject { put("sid", sid) }, envelope = false)
+    suspend fun markRead(session: SchoolSession, sids: List<String>) = messagingAction("messaging/messages/received/read", session, sids)
+    suspend fun markUnread(session: SchoolSession, sids: List<String>) = messagingAction("messaging/messages/received/unread", session, sids)
+    suspend fun deleteMessages(session: SchoolSession, sids: List<String>) = messagingAction("messaging/messages/received/removeselected", session, sids)
+    suspend fun restoreMessages(session: SchoolSession, sids: List<String>) = messagingAction("messaging/messages/received/restoredeleted", session, sids)
+    suspend fun deleteSentMessage(session: SchoolSession, sid: String) = messagingAction("messaging/messages/sent/remove", session, listOf(sid))
+    private suspend fun messagingAction(path: String, session: SchoolSession, sids: List<String>) {
+        val sid = sids.singleOrNull()?.let(::JsonPrimitive) ?: JsonArray(sids.map(::JsonPrimitive))
+        val result = request(path, session, body = buildJsonObject { put("sid", sid) }, envelope = false)
+        if (result["isSuccess"] == JsonPrimitive(false)) throw TamoFailure("TAMO pakeitimo neišsaugojo. Bandykite dar kartą.")
     }
     suspend fun registerDevice(session: SchoolSession, installationId: String, token: String) {
         request("core/app/devices/installation", session, body = buildJsonObject {
@@ -244,7 +251,7 @@ class TamoMapper(private val text: (String) -> String = { it }) {
 
     private fun dateTime(value: String): LocalDateTime? = runCatching { LocalDateTime.parse(value.take(19)) }.getOrNull()
 
-    fun messageHeaders(items: List<JsonObject>, sent: Boolean): List<MessageHeader> = items.mapNotNull { item ->
+    fun messageHeaders(items: List<JsonObject>, sent: Boolean, deleted: Boolean = false): List<MessageHeader> = items.mapNotNull { item ->
         val id = item.string("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
         val sid = item.string("sid").takeIf { it.isNotBlank() } ?: return@mapNotNull null
         val to = item.list("recipientSets").map { text(it.string("title")).substringAfterLast(" > ") }.filter { it.isNotBlank() }
@@ -254,7 +261,8 @@ class TamoMapper(private val text: (String) -> String = { it }) {
             sent || item.string("readDate").isNotBlank(), item["isStarred"] == JsonPrimitive(true), item["isImportant"] == JsonPrimitive(true),
             item["hasAttachments"] == JsonPrimitive(true), sent, item.string("replyModeId").toIntOrNull() ?: 0,
             if (sent) item.string("readCount").toIntOrNull() else null, if (sent) item.string("recipientCount").toIntOrNull() else null,
-            !sent && item.string("senderAvatarType") == "url" && item.string("senderAvatar").substringBefore('?').endsWith("/tamo.svg"))
+            !sent && item.string("senderAvatarType") == "url" && item.string("senderAvatar").substringBefore('?').endsWith("/tamo.svg"),
+            item["isClosable"] != JsonPrimitive(false), deleted)
     }
 
     fun messageDetail(payload: JsonObject, header: MessageHeader): MessageDetail {

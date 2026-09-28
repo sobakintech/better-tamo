@@ -50,7 +50,7 @@ class ExtrasShapeTest {
     @Test fun messageHeadersDistinguishReadStarredAndSent() {
         val received = mapper.messageHeaders(items("""[
             {"id":1,"sid":"1::2::x","messageTypeId":1,"subject":"Konsultacija","date":"2026-09-18T10:00:00.1234567","senderPerson":"Viktorija","senderPersonTitle":"Mokytojas","senderAvatar":"VG","senderAvatarType":"text","readDate":null,"isStarred":true,"isImportant":true,"hasAttachments":true},
-            {"id":2,"sid":"2::3::y","messageTypeId":1,"subject":"Sistema","senderPerson":"TAMO","senderAvatar":"https://x/owl.png","senderAvatarType":"image","readDate":"2026-09-17T09:00:00"},
+            {"id":2,"sid":"2::3::y","messageTypeId":1,"subject":"Sistema","senderPerson":"TAMO","senderAvatar":"https://x/owl.png","senderAvatarType":"image","readDate":"2026-09-17T09:00:00","isClosable":false},
             {"id":5,"sid":"5::6::w","subject":"Apsauga","senderPerson":"TAMO","senderAvatar":"https://content.tamo.lt/images/tamo.svg","senderAvatarType":"url"},
             {"id":3,"subject":"Be sid"}
         ]"""), sent = false)
@@ -62,6 +62,7 @@ class ExtrasShapeTest {
         assertTrue(received[1].read)
         assertFalse(received[0].tamoLogo || received[1].tamoLogo)
         assertTrue(received[2].tamoLogo)
+        assertTrue(received[0].closable && !received[1].closable && !received[0].deleted)
         val sent = mapper.messageHeaders(items("""[{"id":4,"sid":"4::z","subject":"Pažymiai","senderAvatar":"IB","recipientSets":[{"title":"Mano mokytojai > Auksė"}],"recipientCount":1,"readCount":1}]"""), sent = true).single()
         assertEquals("Auksė", sent.person)
         assertEquals("", sent.avatar)

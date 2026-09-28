@@ -4,7 +4,9 @@ package lt.bettertamo.ui
 
 import android.graphics.BitmapFactory
 import android.util.LruCache
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -99,17 +101,31 @@ fun MessagesScreen(open: (String) -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var menu by remember { mutableStateOf(false) }
     val identity = "$folder:$query"
+    val selectable = folder == MessageFolder.RECEIVED || folder == MessageFolder.STARRED || folder == MessageFolder.DELETED
+    var selectedSids by remember(identity) { mutableStateOf(emptySet<String>()) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    BackHandler(selectedSids.isNotEmpty()) { selectedSids = emptySet() }
     RefreshOnResume(identity) { vm.loadMessages(folder, query) }
     val shown = messages.takeIf { loaded["messages"] == identity }.orEmpty()
     val complete = readComplete("messages", identity)
     val list = rememberLazyListState()
     val nearEnd by remember { derivedStateOf { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index?.let { it >= list.layoutInfo.totalItemsCount - 5 } == true } }
     LaunchedEffect(nearEnd, shown.size) { if (nearEnd && shown.isNotEmpty() && !end) vm.loadMoreMessages() }
+    val selected = shown.filter { it.sid in selectedSids }
+    if (confirmDelete) DeleteDialog(selected.size, restorable = true, dismiss = { confirmDelete = false }) { vm.deleteMessages(selected); selectedSids = emptySet() }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            ScreenHeader("Pranešimai", actions = {
-                IconButton(onClick = { searching = !searching; if (!searching && query.isNotEmpty()) { search = ""; query = "" } }) {
+            ScreenHeader(if (selected.isEmpty()) "Pranešimai" else "Pasirinkta: ${selected.size}", back = if (selected.isEmpty()) null else ({ selectedSids = emptySet() }), actions = {
+                if (selected.isEmpty()) IconButton(onClick = { searching = !searching; if (!searching && query.isNotEmpty()) { search = ""; query = "" } }) {
                     Icon(if (searching) Icons.Outlined.SearchOff else Icons.Outlined.Search, if (searching) "Uždaryti paiešką" else "Ieškoti")
+                } else if (folder == MessageFolder.DELETED) IconButton(onClick = { vm.restoreMessages(selected); selectedSids = emptySet() }) {
+                    Icon(Icons.Outlined.RestoreFromTrash, "Atkurti")
+                } else {
+                    val unread = selected.any { !it.read }
+                    IconButton(onClick = { vm.markMessages(selected, read = unread); selectedSids = emptySet() }) {
+                        Icon(if (unread) Icons.Outlined.MarkEmailRead else Icons.Outlined.MarkEmailUnread, if (unread) "Pažymėti kaip skaitytus" else "Pažymėti kaip neskaitytus")
+                    }
+                    if (selected.all { it.closable }) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Outlined.Delete, "Ištrinti") }
                 }
             }) {
                 Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -144,7 +160,10 @@ fun MessagesScreen(open: (String) -> Unit) {
                     if (complete && shown.isEmpty()) item {
                         EmptyPanel(Icons.Outlined.Inbox, if (query.isNotEmpty()) "Nieko nerasta" else "Pranešimų nėra", if (query.isNotEmpty()) "Pabandyk kitą paieškos žodį." else "Šiame aplanke pranešimų nėra.")
                     }
-                    items(shown, key = { it.sid }) { header -> MessageRow(header, { open("message:${header.sid}") }, { vm.starMessage(header) }) }
+                    items(shown, key = { it.sid }) { header ->
+                        val toggle = { selectedSids = if (header.sid in selectedSids) selectedSids - header.sid else selectedSids + header.sid }
+                        MessageRow(header, header.sid in selectedSids, { if (selectedSids.isNotEmpty()) toggle() else open("message:${header.sid}") }, toggle.takeIf { selectable }) { vm.starMessage(header) }
+                    }
                     if ("messages-more" in loading) item { Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) } }
                 }
             }
@@ -164,11 +183,19 @@ private fun folderIcon(folder: MessageFolder) = when (folder) {
 }
 
 @Composable
-private fun MessageRow(header: MessageHeader, onClick: () -> Unit, onStar: () -> Unit) {
+private fun MessageRow(header: MessageHeader, selected: Boolean, onClick: () -> Unit, onLongClick: (() -> Unit)?, onStar: () -> Unit) {
     val unread = !header.read
-    Card(onClick = onClick, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (unread) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surfaceContainerLowest)) {
+    val shape = RoundedCornerShape(16.dp)
+    val container = when {
+        selected -> MaterialTheme.colorScheme.primaryContainer
+        unread -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
+        else -> MaterialTheme.colorScheme.surfaceContainerLowest
+    }
+    Card(shape = shape, colors = CardDefaults.cardColors(containerColor = container), modifier = Modifier.clip(shape).combinedClickable(onLongClickLabel = "Pasirinkti", onLongClick = onLongClick, onClick = onClick)) {
         Row(Modifier.fillMaxWidth().padding(start = 14.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Avatar(header.avatar.ifBlank { header.person.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1) } }, unread, tamoLogo = header.tamoLogo)
+            if (selected) Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(40.dp)) {
+                Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, "Pasirinkta") }
+            } else Avatar(header.avatar.ifBlank { header.person.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1) } }, unread, tamoLogo = header.tamoLogo)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(header.person, style = MaterialTheme.typography.titleSmall.copy(fontWeight = if (unread) FontWeight.Bold else FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -191,6 +218,14 @@ private fun MessageRow(header: MessageHeader, onClick: () -> Unit, onStar: () ->
 @Composable
 private fun ImportantMark(style: TextStyle) {
     Text("!", Modifier.clearAndSetSemantics { contentDescription = "Svarbus" }, style = style.copy(fontWeight = FontWeight.Black), color = MaterialTheme.colorScheme.error)
+}
+
+@Composable
+private fun DeleteDialog(count: Int, restorable: Boolean, dismiss: () -> Unit, confirm: () -> Unit) {
+    AlertDialog(onDismissRequest = dismiss, title = { Text(if (count == 1) "Ištrinti pranešimą?" else "Ištrinti pranešimus ($count)?") },
+        text = if (restorable) ({ Text("Juos bus galima atkurti iš aplanko „Ištrinti“.") }) else null,
+        confirmButton = { TextButton(onClick = { dismiss(); confirm() }) { Text("Ištrinti") } },
+        dismissButton = { TextButton(onClick = dismiss) { Text("Atšaukti") } })
 }
 
 private sealed interface BodyPart {
@@ -278,14 +313,18 @@ fun MessageScreen(sid: String, back: () -> Unit, open: (String) -> Unit) {
     LaunchedEffect(sid) { messages.find { it.sid == sid }?.let(vm::openMessage) ?: back() }
     val current = detail?.takeIf { it.header.sid == sid }
     val uri = LocalUriHandler.current
+    var confirmDelete by remember { mutableStateOf(false) }
+    if (confirmDelete && header != null) DeleteDialog(1, restorable = !header.sent, dismiss = { confirmDelete = false }) { vm.deleteMessages(listOf(header)); back() }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(if (header?.sent == true) "Išsiųstas pranešimas" else "Pranešimas", back, actions = {
-            if (header != null && !header.sent) {
+            if (header != null && !header.sent && !header.deleted) {
                 IconButton(onClick = { vm.starMessage(header) }) {
                     Icon(if (header.starred) Icons.Filled.Star else Icons.Outlined.StarOutline, if (header.starred) "Nuimti žymę" else "Pažymėti žvaigždute", tint = if (header.starred) Color(0xFFF5B301) else MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 IconButton(onClick = { vm.markUnread(header); back() }) { Icon(Icons.Outlined.MarkEmailUnread, "Pažymėti kaip neskaitytą") }
             }
+            if (header?.deleted == true) IconButton(onClick = { vm.restoreMessages(listOf(header)); back() }) { Icon(Icons.Outlined.RestoreFromTrash, "Atkurti") }
+            else if (header?.closable == true) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Outlined.Delete, "Ištrinti") }
         })
         ReadStatus("message", showProgress = false) { header?.let(vm::openMessage) }
         if (header == null) return@Column
