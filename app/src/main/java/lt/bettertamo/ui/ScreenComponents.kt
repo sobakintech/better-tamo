@@ -78,7 +78,7 @@ fun MarkBadge(value: String, kind: DiaryKind, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun DiaryRow(entry: DiaryEntry, showSubject: Boolean = true) {
+fun DiaryRow(entry: DiaryEntry, showSubject: Boolean = true, trailing: @Composable (() -> Unit)? = null) {
     val description = when (entry.kind) {
         DiaryKind.FORMATIVE -> listOf("Kaupiamasis", entry.title).filter { it.isNotBlank() }.joinToString(" · ")
         DiaryKind.ATTENDANCE -> attendanceLabel(entry.value)
@@ -93,6 +93,7 @@ fun DiaryRow(entry: DiaryEntry, showSubject: Boolean = true) {
                 if (showSubject && description.isNotBlank()) Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (!showSubject) Text(entry.date.format(DateTimeFormatter.ofPattern("MM.dd")) + " · " + dayLong[entry.date.dayOfWeek.value - 1].lowercase(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            trailing?.invoke()
         }
     }
 }

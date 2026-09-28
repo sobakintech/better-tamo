@@ -32,7 +32,7 @@ data class Lesson(
     val note: String = "",
     val average: String = "",
     val trend: String = "",
-    val unusedFormatives: List<LessonDetail> = emptyList(),
+    val pendingFormatives: List<DiaryEntry>? = null,
 ) {
     val slotKey get() = "$weekday:$slot"
     val start get() = startTime ?: bellTimes.getOrNull(slot - 1)?.first.orEmpty()

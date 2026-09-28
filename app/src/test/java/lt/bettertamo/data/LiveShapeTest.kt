@@ -14,7 +14,8 @@ class LiveShapeTest {
 
     private val week = json("""{
         "grades":[{"key":"p;7","items":[{"key":"grade","icon":{"content":"5"},"title":{"content":"Praktinis darbas"}}]}],
-        "formatives":[{"key":"p;7","items":[{"lessonId":2,"subjectId":7,"subject":"Gamtos mokslai","date":"2026-09-23","type":"Savarankiškas darbas","title":"6"}]}],
+        "formatives":[{"key":"p;7","items":[{"lessonId":2,"subjectId":7,"subject":"Gamtos mokslai","date":"2026-09-23","type":"Savarankiškas darbas","title":"6"},
+          {"lessonId":1,"subjectId":7,"subject":"Gamtos mokslai","date":"2026-09-16","type":"Apklausa","title":"8","isConverted":true}]}],
         "days":[
           {"date":"2026-09-23","events":[{"id":2,"schoolSubjectId":7,"sid":"s2","eventIcon":{"content":"2"},"eventTitle":{"content":"Gamtos mokslai"},"references":{"grades":"p;7","formatives":"p;7"},"rightIconsMiddle":{"contentType":"icon","content":"icon_note_negative"}}]},
           {"date":"2026-09-24","events":[{"id":3,"schoolSubjectId":7,"sid":"s3","eventIcon":{"content":"2"},"eventTitle":{"content":"Gamtos mokslai"},"references":{"grades":"p;7","formatives":"p;7"},"rightIconsTop":{"contentType":"text","content":"5"},
@@ -38,9 +39,22 @@ class LiveShapeTest {
         assertEquals(listOf("6"), lessons.getValue("2").formatives)
         assertTrue(lessons.getValue("3").formatives.isEmpty())
         assertEquals("negative", lessons.getValue("2").note)
-        assertEquals(listOf("6"), lessons.getValue("4").unusedFormatives.map { it.badge })
-        assertEquals("Įrašyta į 09.23 pamoką", lessons.getValue("4").unusedFormatives.single().label)
+        assertEquals(listOf("6"), lessons.getValue("4").pendingFormatives!!.map { it.value })
         assertEquals("", lessons.getValue("2").assessment)
+    }
+
+    @Test fun subjectFormativesMarkWhichAreUsed() {
+        val pending = mapper.week(week, emptyList()).single { it.id == "4" }.pendingFormatives
+        val diary = mapper.diary(json("""{"items":[],"formativeGrades":[
+            {"lessonId":2,"subject":"Gamtos mokslai","date":"2026-09-23","type":"Savarankiškas darbas","title":"6"},
+            {"lessonId":1,"subject":"Gamtos mokslai","date":"2026-09-16","type":"Apklausa","title":"8"},
+            {"lessonId":5,"subject":"Gamtos mokslai","date":"2026-09-09","type":"Apklausa","title":"+","system":"PLIUSAI_MINUSAI","isConverted":false,"percents":80}]}"""))
+        val plus = diary.single { it.value == "+" }
+        assertEquals("PLIUSAI_MINUSAI", plus.system)
+        assertEquals(80, plus.percents)
+        val merged = subjectFormatives(diary, pending).associate { it.value to it.converted }
+        assertEquals(mapOf("6" to false, "8" to true, "+" to false), merged)
+        assertNull(subjectFormatives(diary, null).single { it.value == "6" }.converted)
     }
 
     @Test fun lessonLabelsAndHighlightsAreKept() {

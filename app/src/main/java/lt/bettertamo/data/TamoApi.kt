@@ -317,9 +317,9 @@ class TamoMapper(private val text: (String) -> String = { it }) {
             val formativeKey = event.obj("references").string("formatives")
             val formatives = (event.list("formatives") + payload.list("formatives").filter { formativeKey.isNotBlank() && it.string("key") == formativeKey }.flatMap { it.list("items") }
                 .filter { it.string("lessonId") == event.string("id") }).distinctBy { listOf(it.string("date"), it.string("type"), it.string("title")) }
-            val unusedFormatives = payload.list("formatives").filter { formativeKey.isNotBlank() && it.string("key") == formativeKey }.flatMap { it.list("items") }
-                .filter { it.string("isConverted") != "true" }.sortedByDescending { it.string("date") }
-                .map { LessonDetail(text(it.string("type")), "", key = "formative", badge = text(it.string("title")), label = date(it.string("date"))?.let { day -> "Įrašyta į ${day.format(DateTimeFormatter.ofPattern("MM.dd"))} pamoką" }.orEmpty()) }
+            val pendingFormatives = formativeKey.takeIf { it.isNotBlank() }?.let { key ->
+                payload.list("formatives").filter { it.string("key") == key }.flatMap { it.list("items") }.mapIndexedNotNull { index, item -> formative(item, index) }.filter { it.converted != true }
+            }
             val formativeDetails = formatives.map { LessonDetail(listOf("Kaupiamasis", text(it.string("type"))).filter { part -> part.isNotBlank() }.joinToString(" · "), "", key = "formative", badge = text(it.string("title"))) }
             val right = listOf("rightIconsTop", "rightIconsMiddle", "rightIconsBottom").flatMap { contents(event, it) }
             val marks = right.filter { it.string("contentType") != "icon" }.map { text(it.string("content")) }.filter { it.isNotBlank() }
@@ -336,7 +336,7 @@ class TamoMapper(private val text: (String) -> String = { it }) {
             val subjectId = event.string("schoolSubjectId").takeIf { it.isNotBlank() && it != "0" } ?: origin?.subjectId?.takeIf { it.isNotBlank() }
             val teacher = origin?.teacher?.ifBlank { null } ?: content(event, "eventSubtitle")
             Lesson(id, subjectId ?: "event:$id", content(event, "eventTitle").ifBlank { origin?.subject.orEmpty() }, teacher, teacher, dayDate.dayOfWeek.value, slot, "", content(event, "eventDescription").ifBlank { origin?.topic.orEmpty() }, dayDate, from?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")) ?: "", to?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")) ?: "", sid, details + formativeDetails, subjectId != null,
-                marks.distinct().joinToString(" · ").ifBlank { details.filter { it.key == "grade" }.joinToString(" · ") { it.badge } }, text(label.string("content")), important, note, average, trend, unusedFormatives)
+                marks.distinct().joinToString(" · ").ifBlank { details.filter { it.key == "grade" }.joinToString(" · ") { it.badge } }, text(label.string("content")), important, note, average, trend, pendingFormatives)
         }
     }.distinctBy { it.id }
 
@@ -376,12 +376,16 @@ class TamoMapper(private val text: (String) -> String = { it }) {
                 attendance.takeIf { it.isNotBlank() }?.let { DiaryEntry("a:$day:$index", subject, day, it, "", DiaryKind.ATTENDANCE) },
             )
         }
-        val formatives = payload.list("formativeGrades").mapIndexedNotNull { index, item ->
-            val day = date(item.string("date")) ?: return@mapIndexedNotNull null
-            val value = text(item.string("title")).ifBlank { return@mapIndexedNotNull null }
-            DiaryEntry("f:${item.string("lessonId")}:$index", text(item.string("subject")), day, value, text(item.string("type")), DiaryKind.FORMATIVE)
-        }
+        val formatives = payload.list("formativeGrades").mapIndexedNotNull { index, item -> formative(item, index) }
         return records + formatives
+    }
+
+    private fun formative(item: JsonObject, index: Int): DiaryEntry? {
+        val day = date(item.string("date")) ?: return null
+        val value = text(item.string("title")).ifBlank { return null }
+        val converted = when (item.string("isConverted")) { "true" -> true; "false" -> false; else -> null }
+        return DiaryEntry("f:${item.string("lessonId")}:$index", text(item.string("subject")), day, value, text(item.string("type")), DiaryKind.FORMATIVE,
+            converted = converted, system = item.string("system"), percents = item.string("percents").toIntOrNull())
     }
 
     private fun color(value: String): Long? = value.removePrefix("#").takeIf { it.length == 6 }?.toLongOrNull(16)?.let { 0xFF000000 or it }

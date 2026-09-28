@@ -11,7 +11,10 @@ enum class DiaryKind { GRADE, FORMATIVE, ATTENDANCE }
 enum class NoticeKind { HOMEWORK, GRADE, FORMATIVE, PRAISE, REMARK, COMMENT, OTHER }
 
 @Serializable
-data class DiaryEntry(val id: String, val subject: String, val date: LocalDate, val value: String, val title: String, val kind: DiaryKind = DiaryKind.GRADE, val color: Long? = null) {
+data class DiaryEntry(
+    val id: String, val subject: String, val date: LocalDate, val value: String, val title: String, val kind: DiaryKind = DiaryKind.GRADE, val color: Long? = null,
+    val converted: Boolean? = null, val system: String = "", val percents: Int? = null,
+) {
     val numeric get() = value.trim().toIntOrNull()?.takeIf { it in 1..10 && kind == DiaryKind.GRADE }
     val missed get() = kind == DiaryKind.ATTENDANCE && value.trim().lowercase().startsWith("n")
 }
@@ -98,3 +101,12 @@ data class MessageHeader(val id: String, val sid: String, val typeId: String, va
                          val read: Boolean, val starred: Boolean, val important: Boolean, val attachments: Boolean, val sent: Boolean, val replyMode: Int = 0, val readCount: Int? = null, val recipientCount: Int? = null,
                          val tamoLogo: Boolean = false, val closable: Boolean = true, val deleted: Boolean = false)
 data class MessageDetail(val header: MessageHeader, val body: String, val files: List<SchoolFile>, val recipients: List<String>, val recipientCount: Int?)
+
+fun subjectFormatives(diary: List<DiaryEntry>, pending: List<DiaryEntry>?): List<DiaryEntry> {
+    fun DiaryEntry.key() = Triple(date, value.trim(), title)
+    val pendingKeys = pending?.map { it.key() }?.toSet()
+    val known = diary.filter { it.kind == DiaryKind.FORMATIVE }
+        .map { if (it.converted != null || pendingKeys == null) it else it.copy(converted = it.key() !in pendingKeys) }
+    val knownKeys = known.map { it.key() }.toSet()
+    return (known + pending.orEmpty().filter { it.key() !in knownKeys }).sortedByDescending { it.date }
+}

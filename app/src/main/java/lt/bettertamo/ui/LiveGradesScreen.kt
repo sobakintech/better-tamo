@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lt.bettertamo.data.*
 import java.time.YearMonth
+import kotlin.math.roundToInt
 
 @Composable
 fun LiveGradesScreen(openSubject: (String) -> Unit) {
@@ -77,10 +78,10 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
     RefreshOnResume(period?.id) { period?.let { vm.loadSemester(it.id) } }
     val subject = subjectOverviews(semester, school.diary.filter { it.date >= schoolYearStart() }, school.lessons).find { it.name == name }
     val entries = subject?.entries.orEmpty().sortedByDescending { it.date }
-    val marks = entries.filter { it.kind != DiaryKind.ATTENDANCE }
+    val marks = entries.filter { it.kind == DiaryKind.GRADE }
     val attendance = entries.filter { it.kind == DiaryKind.ATTENDANCE }
-    val formatives = entries.filter { it.kind == DiaryKind.FORMATIVE }
-    val unused = school.lessons.filter { it.subject == name && it.date != null }.maxByOrNull { it.date!! }?.unusedFormatives.orEmpty()
+    val formatives = subjectFormatives(entries, school.lessons.filter { it.subject == name && it.date != null }.maxByOrNull { it.date!! }?.pendingFormatives)
+    val unused = formatives.filter { it.converted == false }
     val tests = upcoming.filter { name.lowercase() in it.title.lowercase() }
     val lessons = yearLessons.filter { it.subject == name }.sortedByDescending { it.date }
     val today = java.time.LocalDate.now()
@@ -120,7 +121,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
                         }
                         subject?.average?.let { LinearProgressIndicator(progress = { (it / 10.0).toFloat() }, modifier = Modifier.fillMaxWidth(), color = averageColor(it), drawStopIndicator = {}) }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SubjectStat("Pažymiai", marks.count { it.kind == DiaryKind.GRADE }.toString(), Modifier.weight(1f))
+                            SubjectStat("Pažymiai", marks.size.toString(), Modifier.weight(1f))
                             SubjectStat("Kaupiamieji", formatives.size.toString(), Modifier.weight(1f))
                             SubjectStat("Praleista", attendance.count { it.missed }.toString(), Modifier.weight(1f))
                         }
@@ -150,18 +151,22 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
                 item { SubjectSection("Artimiausi atsiskaitymai") }
                 items(tests, key = { "test-${it.id}" }) { event -> UpcomingCard(event, showDate = true) { openDate(event.start) } }
             }
-            if (unused.isNotEmpty()) {
-                item { SubjectSection("Nepanaudoti kaupiamieji") }
-                item {
-                    val values = unused.mapNotNull { it.badge.trim().replace(',', '.').toDoubleOrNull()?.takeIf { value -> value in 1.0..10.0 } }
+            if (formatives.isNotEmpty()) {
+                item { SubjectSection("Kaupiamieji") }
+                if (unused.isNotEmpty()) item {
                     EntryCard(container) {
+                        Text("Nepanaudoti", style = MaterialTheme.typography.titleMedium)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SubjectStat("Vidurkis", formatAverage(values.takeIf { it.isNotEmpty() }?.average()), Modifier.weight(1f))
-                            SubjectStat("Kiekis", unused.size.toString(), Modifier.weight(1f))
+                            formativeStats(unused).forEach { (label, value) -> SubjectStat(label, value, Modifier.weight(1f)) }
                         }
-                        unused.forEach { detail ->
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                            LessonDetailItem(detail)
+                    }
+                }
+                items(formatives, key = { "formative-${it.id}" }) { entry ->
+                    DiaryRow(entry, showSubject = false) {
+                        when (entry.converted) {
+                            false -> SmallTag("Nepanaudotas", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+                            true -> SmallTag("Panaudotas", MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.colorScheme.onSurfaceVariant)
+                            null -> {}
                         }
                     }
                 }
@@ -218,6 +223,17 @@ private fun SubjectLessonRow(record: LessonRecord, onClick: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+private fun formativeStats(unused: List<DiaryEntry>): List<Pair<String, String>> {
+    val values = unused.map { it.value.trim() }
+    val count = "Kiekis" to unused.size.toString()
+    return when {
+        unused.any { it.system == "PLIUSAI_MINUSAI" } || values.all { it in setOf("+", "-", "−") } ->
+            listOf("Pliusai" to values.count { it == "+" }.toString(), "Minusai" to values.count { it != "+" }.toString())
+        unused.any { it.percents != null } -> listOf("Vidurkis" to "${unused.mapNotNull { it.percents }.average().roundToInt()} %", count)
+        else -> listOf("Vidurkis" to formatAverage(values.mapNotNull { it.replace(',', '.').toDoubleOrNull()?.takeIf { value -> value in 1.0..10.0 } }.takeIf { it.isNotEmpty() }?.average()), count)
     }
 }
 
