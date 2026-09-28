@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
@@ -75,8 +76,7 @@ fun TimetableWeekStrip(date: LocalDate, onDate: (LocalDate) -> Unit) {
             val isToday = day == today
             val ink = if (index >= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer
             val hasTest = school.lessons.any { it.date == day && it.highlighted }
-            val dots = badges[day].orEmpty().map { if ("homework" in it) MaterialTheme.colorScheme.tertiary else ink }.toMutableList()
-            if (hasTest) dots.indexOf(ink).let { if (it >= 0) dots[it] = MaterialTheme.colorScheme.error else dots.add(0, MaterialTheme.colorScheme.error) }
+            val dots = dayDots(school, day, ink)
             Surface(
                 onClick = { onDate(day) },
                 modifier = Modifier.weight(1f).semantics {
@@ -97,14 +97,26 @@ fun TimetableWeekStrip(date: LocalDate, onDate: (LocalDate) -> Unit) {
                 Column(Modifier.padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(day.dayOfMonth.toString(), style = MaterialTheme.typography.titleLarge)
                     Text(dayShort[index], style = MaterialTheme.typography.labelMedium)
-                    if (dots.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(top = 3.dp)) {
-                        dots.take(3).forEach { color -> Box(Modifier.size(4.dp).background(color, RoundedCornerShape(2.dp))) }
-                    } else Spacer(Modifier.height(7.dp))
+                    DayDots(dots, Modifier.padding(top = 3.dp))
                     Spacer(Modifier.height(6.dp))
-                    Box(Modifier.fillMaxWidth(0.7f).height(3.dp).background(if (isSelected) ink else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(2.dp)))
+                    Box(Modifier.fillMaxWidth(0.7f).height(3.dp).background(if (isSelected) ink else Color.Transparent, RoundedCornerShape(2.dp)))
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun dayDots(school: SchoolData, day: LocalDate, ink: Color): List<Color> {
+    val dots = school.badges[day].orEmpty().map { if ("homework" in it) MaterialTheme.colorScheme.tertiary else ink }.toMutableList()
+    if (school.lessons.any { it.date == day && it.highlighted }) dots.indexOf(ink).let { if (it >= 0) dots[it] = MaterialTheme.colorScheme.error else dots.add(0, MaterialTheme.colorScheme.error) }
+    return dots
+}
+
+@Composable
+private fun DayDots(dots: List<Color>, modifier: Modifier = Modifier) {
+    Row(modifier.height(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        dots.take(3).forEach { color -> Box(Modifier.size(4.dp).background(color, RoundedCornerShape(2.dp))) }
     }
 }
 
@@ -142,17 +154,20 @@ fun SchoolMonthGrid(month: YearMonth, selectedDate: LocalDate, onDate: (LocalDat
                         val weekend = date.dayOfWeek.value >= 6
                         val kinds = school.calendarEvents.filter { it.contains(date) }.map { it.kind }.distinct()
                         val description = listOf(date.toString()) + kinds.map { it.label }
+                        val ink = when { isSelected && weekend -> MaterialTheme.colorScheme.onErrorContainer; weekend -> MaterialTheme.colorScheme.error; isSelected -> MaterialTheme.colorScheme.onPrimary; !currentMonth -> MaterialTheme.colorScheme.outline; else -> MaterialTheme.colorScheme.onSurface }
+                        val dots = dayDots(school, date, when { weekend -> MaterialTheme.colorScheme.error; !currentMonth -> MaterialTheme.colorScheme.outline; else -> MaterialTheme.colorScheme.onSurface })
                         Surface(
                             onClick = { onDate(date) },
                             modifier = Modifier.weight(1f).testTag("calendar-date-$date").semantics { contentDescription = description.joinToString(", "); selected = isSelected },
                             shape = RoundedCornerShape(12.dp),
                             color = when { isSelected && weekend -> MaterialTheme.colorScheme.errorContainer; isSelected -> MaterialTheme.colorScheme.primary; kinds.isNotEmpty() -> MaterialTheme.colorScheme.secondaryContainer; else -> MaterialTheme.colorScheme.surfaceContainerLowest },
-                            contentColor = when { isSelected && weekend -> MaterialTheme.colorScheme.onErrorContainer; weekend -> MaterialTheme.colorScheme.error; isSelected -> MaterialTheme.colorScheme.onPrimary; !currentMonth -> MaterialTheme.colorScheme.outline; else -> MaterialTheme.colorScheme.onSurface },
+                            contentColor = ink,
                             border = if (date == today && !isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
                         ) {
                             Column(Modifier.heightIn(min = 52.dp).padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                                 Text(date.dayOfMonth.toString(), style = MaterialTheme.typography.titleSmall)
                                 Text(kinds.joinToString(" ") { it.marker }, style = MaterialTheme.typography.labelSmall)
+                                DayDots(dots)
                             }
                         }
                     }
