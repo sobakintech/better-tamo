@@ -28,12 +28,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.input.ImeAction
@@ -162,7 +164,7 @@ private fun MessageRow(header: MessageHeader, onClick: () -> Unit, onStar: () ->
                 }
                 if (header.personTitle.isNotBlank()) Text(header.personTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (header.important) Icon(Icons.Outlined.PriorityHigh, "Svarbus", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                    if (header.important) ImportantMark(MaterialTheme.typography.bodyMedium)
                     Text(header.subject.ifBlank { "(be temos)" }, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (header.sent && header.recipientCount != null && header.readCount != null) Text("Perskaitė ${header.readCount} iš ${header.recipientCount}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -172,6 +174,11 @@ private fun MessageRow(header: MessageHeader, onClick: () -> Unit, onStar: () ->
             }
         }
     }
+}
+
+@Composable
+private fun ImportantMark(style: TextStyle) {
+    Text("!", Modifier.clearAndSetSemantics { contentDescription = "Svarbus" }, style = style.copy(fontWeight = FontWeight.Black), color = MaterialTheme.colorScheme.error)
 }
 
 @Composable
@@ -196,8 +203,10 @@ fun MessageScreen(sid: String, back: () -> Unit, open: (String) -> Unit) {
         ReadStatus("message", showProgress = false) { header?.let(vm::openMessage) }
         if (header == null) return@Column
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (header.important) SmallTag("Svarbus", MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
-            SelectionContainer { Text(header.subject.ifBlank { "(be temos)" }, style = MaterialTheme.typography.headlineSmall) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (header.important) ImportantMark(MaterialTheme.typography.headlineSmall)
+                SelectionContainer { Text(header.subject.ifBlank { "(be temos)" }, style = MaterialTheme.typography.headlineSmall) }
+            }
             Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLowest) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Avatar(header.avatar, false)
