@@ -215,8 +215,15 @@ fun MessageScreen(sid: String, back: () -> Unit, open: (String) -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text(if (header.sent) "Kam: ${header.person}" else header.person, style = MaterialTheme.typography.titleSmall)
                         if (header.personTitle.isNotBlank()) Text(header.personTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        current?.recipientCount?.takeIf { !header.sent && it > 1 }?.let { Text("Visi gavėjai: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                     Text(header.date?.format(fullDate).orEmpty(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (!header.sent && header.replyMode == 0) Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer) {
+                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Outlined.Info, null)
+                    Text("Į šį pranešimą nėra galimybės atsakyti, nes siuntėjas pasirinko tokį nustatymą.", style = MaterialTheme.typography.bodyMedium)
                 }
             }
             if (current == null) {
@@ -250,12 +257,12 @@ fun MessageScreen(sid: String, back: () -> Unit, open: (String) -> Unit) {
                 }
             }
         }
-        if (!header.sent) Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+        if (!header.sent && header.replyMode >= 1) Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(onClick = { open("compose:/Messages/Reply/${header.id}") }, modifier = Modifier.weight(1f)) {
                     Icon(Icons.AutoMirrored.Outlined.Reply, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Atsakyti")
                 }
-                if ((current?.recipientCount ?: 0) in 2..30) OutlinedButton(onClick = { open("compose:/Messages/ReplyAll/${header.id}") }, modifier = Modifier.weight(1f)) {
+                if (header.replyMode == 2) OutlinedButton(onClick = { open("compose:/Messages/ReplyAll/${header.id}") }, modifier = Modifier.weight(1f)) {
                     Icon(Icons.AutoMirrored.Outlined.ReplyAll, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Visiems")
                 }
             }
