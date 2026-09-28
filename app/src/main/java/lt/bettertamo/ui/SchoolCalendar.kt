@@ -8,6 +8,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,6 +33,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 private fun Modifier.calendarSwipe(key: Any, previous: () -> Unit, next: () -> Unit) = pointerInput(key) {
     var distance = 0f
@@ -120,18 +123,40 @@ private fun DayDots(dots: List<Color>, modifier: Modifier = Modifier) {
     }
 }
 
+private val monthEpoch = YearMonth.of(2000, 1)
+private val MONTH_PAGES = monthEpoch.until(YearMonth.of(2100, 1), java.time.temporal.ChronoUnit.MONTHS).toInt()
+private fun monthPage(month: YearMonth) = monthEpoch.until(month, java.time.temporal.ChronoUnit.MONTHS).toInt().coerceIn(0, MONTH_PAGES - 1)
+
 @Composable
-fun SchoolCalendarPanel(month: YearMonth, date: LocalDate, onDate: (LocalDate) -> Unit, previous: () -> Unit, next: () -> Unit, onDismiss: () -> Unit) {
+fun SchoolCalendarPanel(month: YearMonth, date: LocalDate, onDate: (LocalDate) -> Unit, onMonth: (YearMonth) -> Unit, onDismiss: () -> Unit) {
     val school = LocalSchoolData.current
     val vm = LocalPlanner.current
-    Column(Modifier.testTag("calendar-flyout").calendarSwipe(month, previous, next)) {
-        TimetableMonthHeader(month, true, onDismiss, previous, next, { onDate(LocalDate.now()) })
-        LazyColumn(modifier = Modifier.testTag("calendar-scroll"), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { ReadStatus("month") { vm.loadMonth(month, true) } }
-            item { SchoolMonthGrid(month, date, onDate) }
-            val events = school.calendarEvents.filter { it.overlaps(month) }
-            items(events, key = { it.id }) { event ->
-                SchoolEventCard(event) { onDate(maxOf(event.start, month.atDay(1))) }
+    val scope = rememberCoroutineScope()
+    val pager = rememberPagerState(initialPage = monthPage(month)) { MONTH_PAGES }
+    val currentMonth by rememberUpdatedState(month)
+    val currentOnMonth by rememberUpdatedState(onMonth)
+    LaunchedEffect(pager) {
+        snapshotFlow { pager.settledPage }.collect { page -> if (page != monthPage(currentMonth)) currentOnMonth(monthEpoch.plusMonths(page.toLong())) }
+    }
+    LaunchedEffect(month) {
+        val target = monthPage(month)
+        if (pager.currentPage != target && !pager.isScrollInProgress) pager.animateScrollToPage(target)
+    }
+    val shownMonth = monthEpoch.plusMonths(pager.targetPage.toLong())
+    Column(Modifier.testTag("calendar-flyout")) {
+        TimetableMonthHeader(shownMonth, true, onDismiss,
+            { scope.launch { pager.animateScrollToPage(pager.targetPage - 1) } },
+            { scope.launch { pager.animateScrollToPage(pager.targetPage + 1) } },
+            { onDate(LocalDate.now()) })
+        HorizontalPager(pager, pageSpacing = 16.dp, key = { it }, verticalAlignment = Alignment.Top) { page ->
+            val pageMonth = monthEpoch.plusMonths(page.toLong())
+            LazyColumn(modifier = Modifier.fillMaxWidth().then(if (pageMonth == month) Modifier.testTag("calendar-scroll") else Modifier), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (pageMonth == month) item { ReadStatus("month") { vm.loadMonth(month, true) } }
+                item { SchoolMonthGrid(pageMonth, date, onDate) }
+                val events = school.calendarEvents.filter { it.overlaps(pageMonth) }
+                items(events, key = { it.id }) { event ->
+                    SchoolEventCard(event) { onDate(maxOf(event.start, pageMonth.atDay(1))) }
+                }
             }
         }
     }

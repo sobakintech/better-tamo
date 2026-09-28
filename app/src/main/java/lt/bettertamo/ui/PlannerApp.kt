@@ -342,7 +342,7 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
         }
         AnimatedVisibility(visible = expanded, enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(), exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()) {
             Surface(modifier = Modifier.fillMaxWidth().heightIn(max = panelHeight), color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer, shadowElevation = 8.dp) {
-                SchoolCalendarPanel(month, date, ::chooseDate, { monthText = month.minusMonths(1).toString() }, { monthText = month.plusMonths(1).toString() }) { expanded = false }
+                SchoolCalendarPanel(month, date, ::chooseDate, { monthText = it.toString() }) { expanded = false }
             }
         }
     }
