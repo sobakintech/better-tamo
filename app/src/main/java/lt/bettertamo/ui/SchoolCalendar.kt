@@ -1,5 +1,3 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-
 package lt.bettertamo.ui
 
 import androidx.compose.foundation.background
@@ -197,10 +195,6 @@ fun SchoolMonthGrid(month: YearMonth, selectedDate: LocalDate, onDate: (LocalDat
                         }
                     }
                 }
-            }
-            FlowRow(Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("A · Atostogos", style = MaterialTheme.typography.labelMedium)
-                Text("V · Valstybinė šventė", style = MaterialTheme.typography.labelMedium)
             }
         }
     }

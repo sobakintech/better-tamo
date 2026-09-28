@@ -8,7 +8,7 @@ import kotlinx.serialization.UseSerializers
 import java.time.YearMonth
 
 enum class SchoolDayKind(val label: String, val marker: String) {
-    BREAK("Atostogos", "A"), HOLIDAY("Valstybinė šventė", "V"), EVENT("Įvykis", "•")
+    BREAK("Atostogos", "A"), HOLIDAY("Valstybinė šventė", "Š"), EVENT("Įvykis", "•")
 }
 
 @Serializable
