@@ -2,6 +2,8 @@
 
 package lt.bettertamo.ui
 
+import android.graphics.BitmapFactory
+import android.util.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,6 +27,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.material.icons.automirrored.outlined.Send
@@ -45,10 +51,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import lt.bettertamo.data.*
+import java.net.URI
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import javax.net.ssl.HttpsURLConnection
 
 private val clock = DateTimeFormatter.ofPattern("HH:mm")
 private val monthDay = DateTimeFormatter.ofPattern("MM.dd")
@@ -183,6 +193,81 @@ private fun ImportantMark(style: TextStyle) {
     Text("!", Modifier.clearAndSetSemantics { contentDescription = "Svarbus" }, style = style.copy(fontWeight = FontWeight.Black), color = MaterialTheme.colorScheme.error)
 }
 
+private sealed interface BodyPart {
+    data class Styled(val text: AnnotatedString) : BodyPart
+    data class Picture(val url: String) : BodyPart
+}
+
+private val imageTag = Regex("<img\\b[^>]*>", RegexOption.IGNORE_CASE)
+private val imageSource = Regex("\\bsrc\\s*=\\s*[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
+private val blockTag = Regex("<(p|br|div|li|table)\\b", RegexOption.IGNORE_CASE)
+
+@Composable
+private fun MessageBody(html: String) {
+    val linkColor = MaterialTheme.colorScheme.primary
+    val parts = remember(html, linkColor) {
+        val source = if (blockTag.containsMatchIn(html)) html else html.replace("\n", "<br>")
+        val links = TextLinkStyles(SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline))
+        val result = mutableListOf<BodyPart>()
+        var start = 0
+        fun addText(end: Int) {
+            val text = AnnotatedString.fromHtml(source.substring(start, end).replace(Regex("</p>\\s*(?=.)"), "</p><br>"), linkStyles = links)
+            val first = text.indexOfFirst { !it.isWhitespace() }
+            if (first >= 0) result += BodyPart.Styled(text.subSequence(first, text.indexOfLast { !it.isWhitespace() } + 1))
+        }
+        imageTag.findAll(source).forEach { tag ->
+            addText(tag.range.first)
+            imageSource.find(tag.value)?.groupValues?.get(1)?.takeIf { it.startsWith("https://") }?.let { result += BodyPart.Picture(it) }
+            start = tag.range.last + 1
+        }
+        addText(source.length)
+        result
+    }
+    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        parts.forEach { part ->
+            when (part) {
+                is BodyPart.Styled -> SelectionContainer { Text(part.text, style = MaterialTheme.typography.bodyLarge) }
+                is BodyPart.Picture -> RemoteImage(part.url)
+            }
+        }
+    }
+}
+
+private val images = LruCache<String, ImageBitmap>(12)
+
+@Composable
+private fun RemoteImage(url: String) {
+    val image by produceState(images[url], url) {
+        if (value == null) value = withContext(Dispatchers.IO) { runCatching { downloadImage(url) }.getOrNull() }?.also { images.put(url, it) }
+    }
+    image?.let { Image(it, null, Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.FillWidth) }
+}
+
+private fun downloadImage(url: String): ImageBitmap? {
+    val connection = URI(url).toURL().openConnection() as HttpsURLConnection
+    try {
+        connection.connectTimeout = 15_000
+        connection.readTimeout = 20_000
+        if (connection.responseCode !in 200..299) return null
+        val bytes = connection.inputStream.use { input ->
+            val output = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                output.write(buffer, 0, count)
+                if (output.size() > 8 * 1024 * 1024) return null
+            }
+            output.toByteArray()
+        }
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) >= 1200) sample *= 2
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
+    } finally { connection.disconnect() }
+}
+
 @Composable
 fun MessageScreen(sid: String, back: () -> Unit, open: (String) -> Unit) {
     val vm = LocalPlanner.current
@@ -229,13 +314,7 @@ fun MessageScreen(sid: String, back: () -> Unit, open: (String) -> Unit) {
             if (current == null) {
                 if ("message" in loading) Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             } else {
-                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLowest) {
-                    val linkColor = MaterialTheme.colorScheme.primary
-                    val body = remember(current.body, linkColor) {
-                        AnnotatedString.fromHtml(current.body.replace("\n", "<br>").replace(Regex("</p>\\s*(?=.)"), "</p><br>"), linkStyles = TextLinkStyles(SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline)))
-                    }
-                    SelectionContainer(Modifier.padding(16.dp)) { Text(body, style = MaterialTheme.typography.bodyLarge) }
-                }
+                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLowest) { MessageBody(current.body) }
                 if (current.files.isNotEmpty()) {
                     val opening by vm.openingFile.collectAsStateWithLifecycle()
                     Text("Priedai", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
