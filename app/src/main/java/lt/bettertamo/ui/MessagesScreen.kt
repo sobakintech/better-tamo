@@ -162,7 +162,6 @@ private fun MessageRow(header: MessageHeader, onClick: () -> Unit, onStar: () ->
                     if (header.attachments) Icon(Icons.Outlined.AttachFile, "Yra priedų", Modifier.size(16.dp).padding(end = 2.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(messageDate(header.date), style = MaterialTheme.typography.labelMedium, color = if (unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (header.personTitle.isNotBlank()) Text(header.personTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (header.important) ImportantMark(MaterialTheme.typography.bodyMedium)
                     Text(header.subject.ifBlank { "(be temos)" }, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal), maxLines = 1, overflow = TextOverflow.Ellipsis)
