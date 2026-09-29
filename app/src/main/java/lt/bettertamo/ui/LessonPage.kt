@@ -125,7 +125,16 @@ private fun AttachmentRow(file: SchoolFile) {
 
 @Composable
 fun LessonSheet(lesson: Lesson, state: PlannerState, onDismiss: () -> Unit, openSubject: () -> Unit) {
-    val entries = lessonEntries(lesson, LocalSchoolData.current.homework).filter { it.key in sheetKeys }
+    val vm = LocalPlanner.current
+    val feed by vm.feed.collectAsStateWithLifecycle()
+    val remarks by vm.remarks.collectAsStateWithLifecycle()
+    fun normalized(text: String) = text.replace(Regex("\\s+"), " ").trim()
+    val entries = lessonEntries(lesson, LocalSchoolData.current.homework).filter { it.key in sheetKeys }.map { detail ->
+        if (detail.key != "comment") return@map detail
+        val text = normalized(detail.text)
+        val date = (feed + remarks).firstOrNull { it.kind in setOf(NoticeKind.PRAISE, NoticeKind.REMARK, NoticeKind.COMMENT) && text.isNotEmpty() && normalized(it.text) == text }?.date ?: lesson.date
+        date?.let { detail.copy(label = listOf(detail.label, "${it.format(DateTimeFormatter.ofPattern("MM.dd"))} ${dayShort[it.dayOfWeek.value - 1]}").filter(String::isNotBlank).joinToString(" · ")) } ?: detail
+    }
     val container = MaterialTheme.colorScheme.surfaceContainerHigh
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
