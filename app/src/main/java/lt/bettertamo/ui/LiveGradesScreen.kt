@@ -88,7 +88,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
     val subjectLessons = school.lessons.filter { it.subject == name && it.date != null }
     val week = subjectLessons.map { mondayOf(it.date!!) }.distinct().minByOrNull { kotlin.math.abs(java.time.temporal.ChronoUnit.DAYS.between(mondayOf(today), it)) }
     val weekly = subjectLessons.filter { mondayOf(it.date!!) == week }.sortedWith(compareBy({ it.date }, { it.start }))
-    val remarks = feed.filter { it.kind in setOf(NoticeKind.PRAISE, NoticeKind.REMARK, NoticeKind.COMMENT) && it.subject == name }
+    val remarks = feed.filter { it.kind in setOf(NoticeKind.PRAISE, NoticeKind.REMARK, NoticeKind.COMMENT) && it.subject == name }.sortedByDescending { it.date }
     val yearComplete = readComplete("year", schoolYearStart().toString())
     val container = MaterialTheme.colorScheme.surfaceContainerLowest
     PullToRefreshBox(
@@ -186,7 +186,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
             }
             if (remarks.isNotEmpty()) {
                 item { SubjectSection("Pastabos ir pagyrimai") }
-                items(remarks, key = { "remark-${it.id}" }) { notice -> NoticeRow(notice) }
+                items(remarks, key = { "remark-${it.id}" }) { notice -> NoticeRow(notice, showDate = true) }
             }
             if (attendance.isNotEmpty()) {
                 item { SubjectSection("Lankomumas") }

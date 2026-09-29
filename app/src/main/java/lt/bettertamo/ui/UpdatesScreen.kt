@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lt.bettertamo.data.DiaryKind
 import lt.bettertamo.data.NoticeKind
 import lt.bettertamo.data.SchoolNotice
+import lt.bettertamo.data.dayShort
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -82,14 +83,19 @@ fun EventsScreen() {
 }
 
 @Composable
-internal fun NoticeRow(notice: SchoolNotice) {
+internal fun NoticeRow(notice: SchoolNotice, showDate: Boolean = false) {
     val format = DateTimeFormatter.ofPattern("MM.dd")
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(Modifier.width(44.dp).padding(top = 2.dp), contentAlignment = Alignment.TopCenter) { NoticeMark(notice) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (notice.subject.isNotBlank()) Text(notice.subject, style = MaterialTheme.typography.titleMedium)
-                if (notice.kind in remarkKinds && notice.value.isNotBlank()) Text(notice.value, style = MaterialTheme.typography.labelLarge, color = noticeColor(notice.kind))
+                val date = notice.date?.takeIf { showDate }?.let { "${it.format(format)} ${dayShort[it.dayOfWeek.value - 1]}" }
+                val value = notice.value.takeIf { notice.kind in remarkKinds && it.isNotBlank() }
+                if (value != null || date != null) Row {
+                    value?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = noticeColor(notice.kind)) }
+                    date?.let { Text(if (value != null) " · $it" else it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
                 if (notice.teacher.isNotBlank()) Text(notice.teacher, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 val text = when (notice.kind) {
                     NoticeKind.GRADE -> notice.lessonDate?.let { "Įrašyta į ${it.format(format)} pamoką" }.orEmpty()
