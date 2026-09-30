@@ -7,6 +7,8 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlinx.serialization.UseSerializers
 import java.time.LocalTime
+import java.time.LocalDateTime
+import java.time.Duration
 import java.time.temporal.TemporalAdjusters
 
 @Serializable
@@ -55,7 +57,7 @@ data class Homework(
     val completed: Boolean = false,
 )
 
-fun isPlaceholderHomework(text: String): Boolean = text.trim().let { it.length <= 1 || it.none(Char::isLetterOrDigit) }
+fun isPlaceholderHomework(text: String): Boolean =text.trim().let { it.length <= 1 || it.none(Char::isLetterOrDigit) }
 
 @Serializable
 data class LessonDetail(val title: String, val text: String, val files: List<SchoolFile> = emptyList(), val key: String = "", val badge: String = "", val label: String = "")
@@ -148,6 +150,28 @@ fun eventsOn(date: LocalDate, events: List<CustomEvent>, lessons: List<Lesson> =
             else overlaps && lesson.subject.trim().equals(event.title.trim(), ignoreCase = true)
         }
     }.sortedBy { it.start }
+
+data class LessonProgress(val fraction: Float, val minutesLeft: Long)
+
+fun lessonProgress(date: LocalDate?, start: String, end: String, now: LocalDateTime): LessonProgress? {
+    if (date != now.toLocalDate()) return null
+    val from = runCatching { LocalTime.parse(start) }.getOrNull() ?: return null
+    val to = runCatching { LocalTime.parse(end) }.getOrNull() ?: return null
+    val time = now.toLocalTime()
+    if (!to.isAfter(from) || time.isBefore(from) || !time.isBefore(to)) return null
+    val total = Duration.between(from, to).seconds.toFloat()
+    val left = Duration.between(time, to)
+    return LessonProgress(Duration.between(from, time).seconds / total, (left.seconds + 59) / 60)
+}
+
+fun breakProgress(date: LocalDate, spans: List<Pair<String, String>>, now: LocalDateTime): Pair<String, LessonProgress>? {
+    var end: String? = null
+    spans.filter { it.first.isNotBlank() && it.second.isNotBlank() }.sortedBy { it.first }.forEach { (start, finish) ->
+        end?.let { last -> lessonProgress(date, last, start, now)?.let { return last to it } }
+        if (end == null || finish > end!!) end = finish
+    }
+    return null
+}
 
 fun mondayOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 

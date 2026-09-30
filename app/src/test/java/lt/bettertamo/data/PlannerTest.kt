@@ -99,6 +99,29 @@ class PlannerTest {
         assertEquals("Biologija", resolveSubject(lesson, DemoData.initialState.rules).name)
     }
 
+    @Test fun `ongoing lesson reports progress and minutes left`() {
+        val day = LocalDate.of(2026, 9, 30)
+        val progress = lessonProgress(day, "14:15", "15:00", day.atTime(14, 48, 30))!!
+        assertEquals(0.744f, progress.fraction, 0.001f)
+        assertEquals(12L, progress.minutesLeft)
+        assertNull(lessonProgress(day, "14:15", "15:00", day.atTime(15, 0)))
+        assertNull(lessonProgress(day, "14:15", "15:00", day.atTime(14, 14)))
+        assertNull(lessonProgress(day.minusDays(1), "14:15", "15:00", day.atTime(14, 30)))
+        assertNull(lessonProgress(day, "", "", day.atTime(14, 30)))
+    }
+
+    @Test fun `break between lessons reports progress and ignores overlaps`() {
+        val day = LocalDate.of(2026, 9, 30)
+        val spans = listOf("09:05" to "09:50", "08:10" to "08:55", "10:00" to "10:45")
+        val (start, progress) = breakProgress(day, spans, day.atTime(9, 55))!!
+        assertEquals("09:50", start)
+        assertEquals(0.5f, progress.fraction, 0.001f)
+        assertEquals(5L, progress.minutesLeft)
+        assertNull(breakProgress(day, spans, day.atTime(9, 30)))
+        assertNull(breakProgress(day, listOf("08:00" to "10:00", "08:30" to "08:45", "10:00" to "10:45"), day.atTime(9, 0)))
+        assertNull(breakProgress(day, spans, day.atTime(7, 30)))
+    }
+
     @Test fun `old preferences remain compatible without saved rule sources`() {
         assertTrue(Json.decodeFromString<PlannerState>("{\"theme\":\"dark\"}").ruleSources.isEmpty())
     }

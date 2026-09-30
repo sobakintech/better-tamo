@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.drawBehind
@@ -296,6 +297,12 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
         }
     }
     val shownDate by remember { derivedStateOf { pageDay(pager.targetPage) } }
+    val now by produceState(java.time.LocalDateTime.now()) {
+        while (true) {
+            value = java.time.LocalDateTime.now()
+            kotlinx.coroutines.delay(30_000L - System.currentTimeMillis() % 30_000L)
+        }
+    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val panelHeight = maxHeight * 0.86f
         Column {
@@ -321,17 +328,21 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
                         items(schoolEvents, key = { it.id }) { event -> SchoolEventCard(event) { expanded = true } }
                     }
                     if (weekComplete && lessons.isEmpty() && events.isEmpty() && schoolEvents.isEmpty()) item { EmptyPanel(Icons.Outlined.WbSunny, if (day.dayOfWeek.value >= 6) "Savaitgalis" else "Laisva diena", "Šią dieną pamokų nėra.") }
-                    val entries = timetableRows((lessons.map { TimetableEntry(it.start, lesson = it) } + events.map { TimetableEntry(it.start, event = it) }).sortedBy { it.start }, slotTimes(school.lessons), events)
-                    items(entries, key = { it.gap?.let { gap -> "gap-${gap.start}" } ?: it.lesson?.id ?: "event-${it.event!!.id}" }) { entry ->
+                    val pause = breakProgress(day, lessons.map { it.start to it.end } + events.map { it.start to it.end }, now)
+                    val entries = timetableRows((lessons.map { TimetableEntry(it.start, lesson = it) } + events.map { TimetableEntry(it.start, event = it) }).sortedBy { it.start }, slotTimes(school.lessons), events, pause)
+                    items(entries, key = { it.pause?.let { "pause" } ?: it.gap?.let { gap -> "gap-${gap.start}" } ?: it.lesson?.id ?: "event-${it.event!!.id}" }) { entry ->
+                        entry.pause?.let { BreakMarker(it) }
                         entry.gap?.let { gap -> FreePeriod(gap) { addLesson(gap) } }
                         entry.lesson?.let { lesson ->
                             val subject = resolveSubject(lesson, state.rules)
                             LessonCard(subject.name, lesson.topic, start = lesson.start, end = lesson.end, slot = lesson.slot,
                                 dueHomework = lesson.hasHomework, assignedHomework = lesson.details.any { it.key == "homework_next" } || school.homework.any { it.lessonId == lesson.id },
-                                assessment = lesson.assessment, lessonLabel = lesson.label, important = lesson.highlighted, remark = lesson.note, formatives = lesson.formatives, average = lesson.average, trend = lesson.trend) { openLesson(lesson.id) }
+                                assessment = lesson.assessment, lessonLabel = lesson.label, important = lesson.highlighted, remark = lesson.note, formatives = lesson.formatives, average = lesson.average, trend = lesson.trend,
+                                progress = lessonProgress(lesson.date, lesson.start, lesson.end, now)) { openLesson(lesson.id) }
                         }
                         entry.event?.let { event ->
-                            LessonCard(event.title, event.note, custom = true, start = event.start, end = event.end, slot = event.slot.takeIf { it > 0 }) { openEvent(event.id) }
+                            LessonCard(event.title, event.note, custom = true, start = event.start, end = event.end, slot = event.slot.takeIf { it > 0 },
+                                progress = lessonProgress(day, event.start, event.end, now)) { openEvent(event.id) }
                         }
                     }
                 }
@@ -371,12 +382,12 @@ internal fun TimetableList(isRefreshing: Boolean, onRefresh: () -> Unit, content
 
 data class Gap(val start: String, val end: String, val slot: Int?)
 
-private data class TimetableEntry(val start: String, val lesson: Lesson? = null, val event: CustomEvent? = null, val gap: Gap? = null)
+private data class TimetableEntry(val start: String, val lesson: Lesson? = null, val event: CustomEvent? = null, val gap: Gap? = null, val pause: LessonProgress? = null)
 
 private fun slotTimes(lessons: List<Lesson>): Map<Int, Pair<String, String>> = lessons.filter { it.slot > 0 && it.start.isNotBlank() && it.end.isNotBlank() }
     .groupBy { it.slot }.mapValues { (_, list) -> list.groupingBy { it.start to it.end }.eachCount().maxBy { it.value }.key }
 
-private fun timetableRows(entries: List<TimetableEntry>, times: Map<Int, Pair<String, String>>, events: List<CustomEvent>): List<TimetableEntry> {
+private fun timetableRows(entries: List<TimetableEntry>, times: Map<Int, Pair<String, String>>, events: List<CustomEvent>, pause: Pair<String, LessonProgress>?): List<TimetableEntry> {
     val gaps = mutableListOf<Gap>()
     val lessons = entries.mapNotNull { it.lesson }.filter { it.slot > 0 && it.start.isNotBlank() && it.end.isNotBlank() }.sortedBy { it.slot }
     lessons.zipWithNext().forEach { (last, next) ->
@@ -387,7 +398,21 @@ private fun timetableRows(entries: List<TimetableEntry>, times: Map<Int, Pair<St
             else listOf(Gap(last.end, next.start, missing.singleOrNull()))
     }
     val open = gaps.filter { gap -> events.none { it.start < gap.end && it.end > gap.start } }
-    return (entries + open.map { TimetableEntry(it.start, gap = it) }).sortedWith(compareBy({ it.start }, { if (it.gap != null) 1 else 0 }))
+    val marker = listOfNotNull(pause?.let { (start, progress) -> TimetableEntry(start, pause = progress) })
+    return (entries + marker + open.map { TimetableEntry(it.start, gap = it) }).sortedWith(compareBy({ it.start }, { when { it.pause != null -> 1; it.gap != null -> 2; else -> 0 } }))
+}
+
+@Composable
+private fun BreakMarker(progress: LessonProgress) {
+    val primary = MaterialTheme.colorScheme.primary
+    Row(Modifier.fillMaxWidth().heightIn(min = 24.dp).padding(horizontal = 8.dp).semantics(mergeDescendants = true) { contentDescription = "Pertrauka, liko ${progress.minutesLeft} min." },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Pertrauka", style = MaterialTheme.typography.labelMedium, color = primary)
+        Box(Modifier.weight(1f).height(4.dp).background(primary.copy(alpha = 0.16f), CircleShape)) {
+            Box(Modifier.fillMaxWidth(progress.fraction).fillMaxHeight().background(primary, CircleShape))
+        }
+        Text("liko ${progress.minutesLeft} min.", style = MaterialTheme.typography.labelMedium, color = primary)
+    }
 }
 
 @Composable
@@ -416,17 +441,26 @@ fun NoteIcon(note: String, modifier: Modifier = Modifier) {
 @Composable
 fun LessonCard(title: String, description: String, custom: Boolean = false, start: String? = null, end: String? = null, slot: Int? = null, dueHomework: Boolean = false, assignedHomework: Boolean = false,
     assessment: String = "", lessonLabel: String = "", important: Boolean = false, remark: String = "", formatives: List<String> = emptyList(), average: String = "", trend: String = "",
-    teacher: String = "", descriptionLines: Int = 1, containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surfaceContainerLowest, onClick: (() -> Unit)?) {
+    teacher: String = "", descriptionLines: Int = 1, containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surfaceContainerLowest, progress: LessonProgress? = null, onClick: (() -> Unit)?) {
     val marks = assessment.split(" · ").filter { it.isNotBlank() }
     val hasSide = marks.isNotEmpty() || formatives.isNotEmpty() || remark.isNotBlank() || average.isNotBlank()
     val accent = MaterialTheme.colorScheme.error
+    val primary = MaterialTheme.colorScheme.primary
     val content: @Composable ColumnScope.() -> Unit = {
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).drawBehind { if (important) drawRect(accent, size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height)) }
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).drawBehind {
+                if (important) drawRect(accent, size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height))
+                if (progress != null) {
+                    val bar = 4.dp.toPx()
+                    drawRect(primary.copy(alpha = 0.16f), topLeft = androidx.compose.ui.geometry.Offset(0f, size.height - bar), size = androidx.compose.ui.geometry.Size(size.width, bar))
+                    drawRect(primary, topLeft = androidx.compose.ui.geometry.Offset(0f, size.height - bar), size = androidx.compose.ui.geometry.Size(size.width * progress.fraction, bar))
+                }
+            }
+            .then(if (progress != null) Modifier.semantics { stateDescription = "Vyksta, liko ${progress.minutesLeft} min." } else Modifier)
             .padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             if (start != null && end != null) {
                 Column(Modifier.width((44 * LocalDensity.current.fontScale.coerceIn(1f, 2f)).dp).fillMaxHeight().heightIn(min = 68.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
                     Text(start, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                    if (slot != null && slot > 0) Text(slot.toString(), style = MaterialTheme.typography.titleLarge)
+                    if (slot != null && slot > 0) Text(slot.toString(), style = MaterialTheme.typography.titleLarge, color = if (progress != null) primary else androidx.compose.ui.graphics.Color.Unspecified)
                     Text(end, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
                 VerticalDivider(Modifier.fillMaxHeight(), color = MaterialTheme.colorScheme.outlineVariant)
@@ -470,8 +504,9 @@ fun LessonCard(title: String, description: String, custom: Boolean = false, star
         }
     }
     val colors = CardDefaults.cardColors(containerColor = containerColor)
-    if (onClick != null) Card(onClick = onClick, shape = RoundedCornerShape(16.dp), colors = colors, content = content)
-    else Card(shape = RoundedCornerShape(16.dp), colors = colors, content = content)
+    val border = progress?.let { androidx.compose.foundation.BorderStroke(2.dp, primary) }
+    if (onClick != null) Card(onClick = onClick, shape = RoundedCornerShape(16.dp), colors = colors, border = border, content = content)
+    else Card(shape = RoundedCornerShape(16.dp), colors = colors, border = border, content = content)
 }
 
 @Composable
