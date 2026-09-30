@@ -13,6 +13,14 @@ import androidx.compose.ui.graphics.Color
 import lt.bettertamo.data.DiaryEntry
 import lt.bettertamo.data.DiaryKind
 import lt.bettertamo.data.dayLong
+import lt.bettertamo.data.webLinks
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.filled.Coffee
@@ -60,6 +68,19 @@ fun MonthNavigation(month: YearMonth, select: (YearMonth) -> Unit, refresh: () -
         IconButton(onClick = { select(YearMonth.now()) }, enabled = month != YearMonth.now()) { Icon(Icons.Outlined.Today, "Šis mėnuo") }
         IconButton(onClick = refresh) { Icon(Icons.Outlined.Refresh, refreshLabel) }
     }
+}
+
+@Composable
+fun LinkedText(text: String, modifier: Modifier = Modifier, style: TextStyle = LocalTextStyle.current, color: Color = Color.Unspecified) {
+    val linkColor = MaterialTheme.colorScheme.primary
+    val annotated = remember(text, linkColor) {
+        val links = TextLinkStyles(SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline))
+        buildAnnotatedString {
+            append(text)
+            webLinks(text).forEach { (range, url) -> addLink(LinkAnnotation.Url(url, links), range.first, range.last + 1) }
+        }
+    }
+    SelectionContainer(modifier) { Text(annotated, style = style, color = color) }
 }
 
 @Composable

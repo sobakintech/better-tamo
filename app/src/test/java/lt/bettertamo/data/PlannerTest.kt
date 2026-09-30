@@ -122,6 +122,14 @@ class PlannerTest {
         assertNull(breakProgress(day, spans, day.atTime(7, 30)))
     }
 
+    @Test fun `web links are found without trailing punctuation`() {
+        val text = "Žr. https://example.com/a?b=1. Taip pat www.example.org), ne example.com."
+        val links = webLinks(text)
+        assertEquals(listOf("https://example.com/a?b=1", "https://www.example.org"), links.map { it.second })
+        assertEquals("https://example.com/a?b=1", text.substring(links[0].first))
+        assertEquals("www.example.org", text.substring(links[1].first))
+    }
+
     @Test fun `old preferences remain compatible without saved rule sources`() {
         assertTrue(Json.decodeFromString<PlannerState>("{\"theme\":\"dark\"}").ruleSources.isEmpty())
     }

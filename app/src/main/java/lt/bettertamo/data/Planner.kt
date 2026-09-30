@@ -58,6 +58,15 @@ data class Homework(
     val files: List<SchoolFile> = emptyList(),
 )
 
+private val webLink = Regex("""(?i)\b(?:https?://|www\.)[^\s<>"']+""")
+
+fun webLinks(text: String): List<Pair<IntRange, String>> = webLink.findAll(text).mapNotNull { match ->
+    val value = match.value.trimEnd('.', ',', ';', ':', '!', '?', ')', ']', '»', '"')
+    if (value.length < 8) return@mapNotNull null
+    val range = match.range.first until match.range.first + value.length
+    range to if (value.startsWith("www.", ignoreCase = true)) "https://$value" else value
+}.toList()
+
 fun isPlaceholderHomework(text: String): Boolean =text.trim().let { it.length <= 1 || it.none(Char::isLetterOrDigit) }
 
 @Serializable

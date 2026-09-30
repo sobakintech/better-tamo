@@ -102,7 +102,7 @@ internal fun NoticeRow(notice: SchoolNotice, showDate: Boolean = false) {
                     NoticeKind.FORMATIVE -> listOf("Kaupiamasis", notice.text).filter { it.isNotBlank() }.joinToString(" · ") + (notice.lessonDate?.let { " · ${it.format(format)} pamoka" } ?: "")
                     else -> notice.text
                 }
-                if (text.isNotBlank()) SelectionContainer { Text(text, color = if (notice.kind == NoticeKind.GRADE || notice.kind == NoticeKind.FORMATIVE) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface) }
+                if (text.isNotBlank()) LinkedText(text, color = if (notice.kind == NoticeKind.GRADE || notice.kind == NoticeKind.FORMATIVE) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                 notice.deadline?.let { Text("Atlikti iki ${it.format(format)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }

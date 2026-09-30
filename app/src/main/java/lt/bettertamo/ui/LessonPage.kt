@@ -65,9 +65,7 @@ fun LessonHeaderCard(lesson: Lesson, state: PlannerState, container: Color) {
                     lesson.date?.let { DetailRow(Icons.Outlined.Event, "${dayLong[it.dayOfWeek.value - 1]}, ${it.format(DateTimeFormatter.ofPattern("MM.dd"))}") }
                     if (lesson.teacher.isNotBlank()) DetailRow(Icons.Outlined.Person, lesson.teacher)
                 }
-                if (lesson.topic.isNotBlank()) SelectionContainer(Modifier.padding(top = 6.dp)) {
-                    Text(lesson.topic, style = MaterialTheme.typography.bodyLarge)
-                }
+                if (lesson.topic.isNotBlank()) LinkedText(lesson.topic, Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodyLarge)
             }
         }
     }
@@ -97,7 +95,7 @@ fun LessonDetailItem(detail: LessonDetail, title: String = defaultDetailTitle(de
             if (detail.label.isNotBlank()) Text(detail.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
-    if (detail.text.isNotBlank() && !(detail.key == "grade" && detail.text.trim().lowercase() in gradeWords)) SelectionContainer { Text(detail.text) }
+    if (detail.text.isNotBlank() && !(detail.key == "grade" && detail.text.trim().lowercase() in gradeWords)) LinkedText(detail.text)
     detail.files.forEach { file -> AttachmentRow(file) }
 }
 
