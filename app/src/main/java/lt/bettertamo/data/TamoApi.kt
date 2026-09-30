@@ -144,8 +144,9 @@ class TamoApi {
         val result = request("GetAwards", session, range(month.atDay(1), month.atEndOfMonth()), legacy = true).obj("Result")
         return mapper.notices(if (result["items"] is JsonArray) result.requiredList("items") else result.requiredList("Items"), true)
     }
-    suspend fun fileUrl(session: SchoolSession, sid: String): String {
-        val url = request("files/filedownloadurl", session, form = mapOf("fileSid" to sid)).string("url")
+    suspend fun fileUrl(session: SchoolSession, file: SchoolFile): String {
+        val url = if (file.legacy) request("GetFileUrl", session, mapOf("fileId" to file.sid), legacy = true).obj("Result").let { it.string("url").ifBlank { it.string("Url") } }
+            else request("files/filedownloadurl", session, form = mapOf("fileSid" to file.sid)).string("url")
         return url.takeIf { runCatching { URI(it).scheme == "https" }.getOrDefault(false) } ?: throw TamoFailure("TAMO negrąžino priedo nuorodos.")
     }
     suspend fun periods(session: SchoolSession): List<SchoolPeriod> {
@@ -359,12 +360,23 @@ class TamoMapper(private val text: (String) -> String = { it }) {
         }
     }.distinctBy { it.id }
 
-    fun homework(payload: JsonObject): List<Homework> = payload.requiredList("items").filterNot { isPlaceholderHomework(text(it.string("homeWork"))) }.map { item ->
+    fun homework(payload: JsonObject): List<Homework> = payload.requiredList("items").mapNotNull { item ->
+        val files = item.list("files").mapNotNull { file ->
+            val legacyId = file.string("fileId").ifBlank { file.string("id") }
+            val name = text(file.string("fileName").ifBlank { file.string("content") }).ifBlank { "Priedas" }
+            when {
+                legacyId.isNotBlank() -> SchoolFile(legacyId, name, legacy = true)
+                file.string("fileSid").isNotBlank() -> SchoolFile(file.string("fileSid"), name)
+                else -> null
+            }
+        }.distinctBy { it.sid }
+        val body = text(item.string("homeWork")).takeUnless(::isPlaceholderHomework).orEmpty()
+        if (body.isBlank() && files.isEmpty()) return@mapNotNull null
         val due = date(item.string("deadline")) ?: throw TamoFailure("Neatpažinta namų darbo data.")
         val assigned = date(item.string("date"))
         val id = item.string("lessonId")
         if (id.isBlank() || id == "0") throw TamoFailure("TAMO negrąžino namų darbo identifikatoriaus.")
-        Homework("$id:$due", id, due.dayOfWeek.value, text(item.string("homeWork")), assigned?.dayOfWeek?.value ?: 1, due, assigned, text(item.string("thingName")), item.string("completionDate").isNotBlank())
+        Homework("$id:$due", id, due.dayOfWeek.value, body, assigned?.dayOfWeek?.value ?: 1, due, assigned, text(item.string("thingName")), item.string("completionDate").isNotBlank(), files)
     }.distinctBy { it.id }
 
     fun calendar(payload: JsonObject, month: YearMonth): List<SchoolCalendarEvent> = payload.requiredList("allDayEvents").map { event ->

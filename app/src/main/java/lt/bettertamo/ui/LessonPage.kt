@@ -110,7 +110,7 @@ fun defaultDetailTitle(detail: LessonDetail) = when (detail.key) {
 fun remarkOf(badge: String) = when { "negative" in badge -> "negative"; "positive" in badge -> "positive"; else -> "comment" }
 
 @Composable
-private fun AttachmentRow(file: SchoolFile) {
+internal fun AttachmentRow(file: SchoolFile) {
     val vm = LocalPlanner.current
     val opening by vm.openingFile.collectAsStateWithLifecycle()
     Surface(onClick = { vm.openFile(file) }, enabled = opening == null, shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerHighest) {

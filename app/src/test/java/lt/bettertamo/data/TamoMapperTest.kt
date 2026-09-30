@@ -95,6 +95,15 @@ class TamoMapperTest {
         assertNull(mapper.ranking(json("""{"items":[{"current":"5","ratingInfos":[{"nr":"1","value":"9"}]}]}""").list("items")))
     }
 
+    @Test fun homeworkKeepsAttachmentsEvenWithPlaceholderText() {
+        val works = mapper.homework(json("""{"items":[
+            {"lessonId":1,"date":"2026-09-07","deadline":"2026-09-09","homeWork":"-","thingName":"Dailė","files":[{"fileId":"f-1","fileName":"uzduotis.pdf","fileType":"pdf"}]},
+            {"lessonId":2,"date":"2026-09-07","deadline":"2026-09-09","homeWork":"Skaityti","thingName":"Istorija","files":[{"fileSid":"s-2","content":"lapas.docx"}]}]}"""))
+        assertEquals(listOf("", "Skaityti"), works.map { it.text })
+        assertEquals(SchoolFile("f-1", "uzduotis.pdf", legacy = true), works[0].files.single())
+        assertEquals(SchoolFile("s-2", "lapas.docx"), works[1].files.single())
+    }
+
     @Test fun calendarUsesLiveFieldAliasesAndStableSubjectId() {
         val payload = json("""{"days":[{"date":"2026-09-08","events":[{"id":41,"schoolSubjectId":88,"sid":"returned-sid","eventIcon":{"content":"6"},"eventTitle":{"content":"Dailė"},"eventSubtitle":{"content":"Mokytoja"},"eventDetails":[{"key":"homework","title":{"content":"Namų darbas"},"body":{"content":"Atsinešti popieriaus"},"label":{"content":"Užduota 09.01"}}]}]}]}""")
         val lesson = mapper.week(payload, emptyList()).single()

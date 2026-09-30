@@ -55,6 +55,7 @@ data class Homework(
     val assignedDate: LocalDate? = null,
     val subject: String = "",
     val completed: Boolean = false,
+    val files: List<SchoolFile> = emptyList(),
 )
 
 fun isPlaceholderHomework(text: String): Boolean =text.trim().let { it.length <= 1 || it.none(Char::isLetterOrDigit) }
@@ -62,7 +63,7 @@ fun isPlaceholderHomework(text: String): Boolean =text.trim().let { it.length <=
 @Serializable
 data class LessonDetail(val title: String, val text: String, val files: List<SchoolFile> = emptyList(), val key: String = "", val badge: String = "", val label: String = "")
 @Serializable
-data class SchoolFile(val sid: String, val name: String)
+data class SchoolFile(val sid: String, val name: String, val legacy: Boolean = false)
 
 enum class MatchMode { SLOTS, TEACHER }
 

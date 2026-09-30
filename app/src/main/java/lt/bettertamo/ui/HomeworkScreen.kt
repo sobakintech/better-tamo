@@ -138,7 +138,8 @@ private fun HomeworkCard(homework: Homework, subject: String, teacher: String, d
             Column(Modifier.weight(1f).padding(top = 12.dp).alpha(if (done) 0.6f else 1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(subject, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     textDecoration = if (done) TextDecoration.LineThrough else null)
-                SelectionContainer { Text(homework.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if (homework.text.isNotBlank()) SelectionContainer { Text(homework.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                homework.files.forEach { AttachmentRow(it) }
                 val meta = listOfNotNull(homework.assignedDate?.let { "Užduota ${it.format(DateTimeFormatter.ofPattern("MM.dd"))}" }, teacher.takeIf { it.isNotBlank() })
                 if (meta.isNotEmpty()) Text(meta.joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp))

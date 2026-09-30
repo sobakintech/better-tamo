@@ -332,7 +332,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         if (openingFile.value != null) return
         openingFile.value = file.sid
         viewModelScope.launch {
-            try { fileLinks.emit(api.fileUrl(account, file.sid) to file.name) }
+            try { fileLinks.emit(api.fileUrl(account, file) to file.name) }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) { error.value = (e as? TamoFailure)?.userMessage ?: "Priedo atidaryti nepavyko." }
             finally { openingFile.value = null }
