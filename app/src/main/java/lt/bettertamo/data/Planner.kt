@@ -161,8 +161,6 @@ fun eventsOn(date: LocalDate, events: List<CustomEvent>, lessons: List<Lesson> =
         }
     }.sortedBy { it.start }
 
-data class LessonProgress(val fraction: Float, val minutesLeft: Long)
-
 data class Ranking(val position: Int, val averages: List<Double>) {
     val total get() = averages.size
     val average get() = averages.getOrNull(position - 1)
@@ -170,22 +168,26 @@ data class Ranking(val position: Int, val averages: List<Double>) {
 
 fun rankingKey(subject: String) = subject.trim().lowercase()
 
-fun lessonProgress(date: LocalDate?, start: String, end: String, now: LocalDateTime): LessonProgress? {
+fun lessonProgress(date: LocalDate?, start: String, end: String, now: LocalDateTime): Float? {
     if (date != now.toLocalDate()) return null
     val from = runCatching { LocalTime.parse(start) }.getOrNull() ?: return null
     val to = runCatching { LocalTime.parse(end) }.getOrNull() ?: return null
     val time = now.toLocalTime()
     if (!to.isAfter(from) || time.isBefore(from) || !time.isBefore(to)) return null
-    val total = Duration.between(from, to).seconds.toFloat()
-    val left = Duration.between(time, to)
-    return LessonProgress(Duration.between(from, time).seconds / total, (left.seconds + 59) / 60)
+    return Duration.between(from, time).seconds / Duration.between(from, to).seconds.toFloat()
 }
 
-fun breakProgress(date: LocalDate, spans: List<Pair<String, String>>, now: LocalDateTime): Pair<String, LessonProgress>? {
+data class NowMarker(val from: Int, val to: Int, val fraction: Float)
+
+fun nowMarker(date: LocalDate, spans: List<Pair<String, String>>, now: LocalDateTime): NowMarker? {
     var end: String? = null
-    spans.filter { it.first.isNotBlank() && it.second.isNotBlank() }.sortedBy { it.first }.forEach { (start, finish) ->
-        end?.let { last -> lessonProgress(date, last, start, now)?.let { return last to it } }
+    var previous = -1
+    spans.forEachIndexed { index, (start, finish) ->
+        if (start.isBlank() || finish.isBlank()) return@forEachIndexed
+        end?.let { last -> lessonProgress(date, last, start, now)?.let { return NowMarker(previous, index, it) } }
+        lessonProgress(date, start, finish, now)?.let { return NowMarker(index, index, it) }
         if (end == null || finish > end!!) end = finish
+        previous = index
     }
     return null
 }

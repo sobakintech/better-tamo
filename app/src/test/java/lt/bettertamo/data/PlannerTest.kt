@@ -99,27 +99,24 @@ class PlannerTest {
         assertEquals("Biologija", resolveSubject(lesson, DemoData.initialState.rules).name)
     }
 
-    @Test fun `ongoing lesson reports progress and minutes left`() {
+    @Test fun `ongoing lesson reports how much has passed`() {
         val day = LocalDate.of(2026, 9, 30)
-        val progress = lessonProgress(day, "14:15", "15:00", day.atTime(14, 48, 30))!!
-        assertEquals(0.744f, progress.fraction, 0.001f)
-        assertEquals(12L, progress.minutesLeft)
+        assertEquals(0.744f, lessonProgress(day, "14:15", "15:00", day.atTime(14, 48, 30))!!, 0.001f)
         assertNull(lessonProgress(day, "14:15", "15:00", day.atTime(15, 0)))
         assertNull(lessonProgress(day, "14:15", "15:00", day.atTime(14, 14)))
         assertNull(lessonProgress(day.minusDays(1), "14:15", "15:00", day.atTime(14, 30)))
         assertNull(lessonProgress(day, "", "", day.atTime(14, 30)))
     }
 
-    @Test fun `break between lessons reports progress and ignores overlaps`() {
+    @Test fun `now marker moves through lessons and breaks and ignores overlaps`() {
         val day = LocalDate.of(2026, 9, 30)
-        val spans = listOf("09:05" to "09:50", "08:10" to "08:55", "10:00" to "10:45")
-        val (start, progress) = breakProgress(day, spans, day.atTime(9, 55))!!
-        assertEquals("09:50", start)
-        assertEquals(0.5f, progress.fraction, 0.001f)
-        assertEquals(5L, progress.minutesLeft)
-        assertNull(breakProgress(day, spans, day.atTime(9, 30)))
-        assertNull(breakProgress(day, listOf("08:00" to "10:00", "08:30" to "08:45", "10:00" to "10:45"), day.atTime(9, 0)))
-        assertNull(breakProgress(day, spans, day.atTime(7, 30)))
+        val spans = listOf("08:10" to "08:55", "" to "", "09:05" to "09:50", "10:00" to "10:45")
+        assertEquals(NowMarker(2, 2, 0.5f), nowMarker(day, spans, day.atTime(9, 27, 30)))
+        assertEquals(NowMarker(0, 2, 0.5f), nowMarker(day, spans, day.atTime(9, 0)))
+        assertNull(nowMarker(day, spans, day.atTime(7, 30)))
+        assertNull(nowMarker(day, spans, day.atTime(11, 0)))
+        assertNull(nowMarker(day.plusDays(1), spans, day.atTime(9, 0)))
+        assertEquals(NowMarker(0, 0, 0.5f), nowMarker(day, listOf("08:00" to "10:00", "08:30" to "08:45", "10:00" to "10:45"), day.atTime(9, 0)))
     }
 
     @Test fun `web links are found without trailing punctuation`() {
