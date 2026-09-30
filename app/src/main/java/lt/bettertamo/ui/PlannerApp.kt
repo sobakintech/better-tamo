@@ -331,6 +331,7 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
                     onRefresh = { vm.loadWeek(day, true); vm.loadMonth(YearMonth.from(day), true) },
                     marker = marker,
                 ) {
+                    if ("icon_birthday" in school.dayIcons[day].orEmpty() && schoolEvents.none { it.title.contains("gimtadien", ignoreCase = true) }) item("birthday") { BirthdayCard() }
                     if (schoolEvents.isNotEmpty()) {
                         items(schoolEvents, key = { it.id }) { event -> SchoolEventCard(event) { expanded = true } }
                     }

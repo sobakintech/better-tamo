@@ -278,9 +278,10 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
     fun loadMonth(month: YearMonth, force: Boolean = false) {
         read("month", month.toString(), force) { account ->
             val events = api.calendar(account, month)
-            val badges = api.badges(account, month)
+            val (badges, icons) = api.badges(account, month)
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            school.value = school.value.copy(calendarEvents = (school.value.calendarEvents.filterNot { it.overlaps(month) } + events).distinctBy { it.id }, badges = school.value.badges.filterKeys { YearMonth.from(it) != month } + badges, monthLoaded = month.toString())
+            school.value = school.value.copy(calendarEvents = (school.value.calendarEvents.filterNot { it.overlaps(month) } + events).distinctBy { it.id }, badges = school.value.badges.filterKeys { YearMonth.from(it) != month } + badges,
+                dayIcons = school.value.dayIcons.filterKeys { YearMonth.from(it) != month } + icons, monthLoaded = month.toString())
         }
     }
 

@@ -42,8 +42,9 @@ data class SchoolSnapshot(
     val semesterPeriod: String? = null,
     val semester: List<SemesterSubject> = emptyList(),
     val feed: List<SchoolNotice>? = null,
+    val dayIcons: Map<LocalDate, List<String>> = emptyMap(),
 ) {
-    fun school() = SchoolData(lessons = lessons, homework = homework, homeworkLoaded = homeworkLoaded, calendarEvents = calendarEvents, badges = badges, diary = diary, diaryMonths = diaryMonths, loadedWeeks = loadedWeeks)
+    fun school() = SchoolData(lessons = lessons, homework = homework, homeworkLoaded = homeworkLoaded, calendarEvents = calendarEvents, badges = badges, dayIcons = dayIcons, diary = diary, diaryMonths = diaryMonths, loadedWeeks = loadedWeeks)
 
     companion object {
         fun of(scope: String, school: SchoolData, periods: List<SchoolPeriod>, semesterPeriod: String?, semester: List<SemesterSubject>, feed: List<SchoolNotice>?, today: LocalDate = LocalDate.now()): SchoolSnapshot {
@@ -55,7 +56,7 @@ data class SchoolSnapshot(
                 school.badges.filterKeys { it in window },
                 school.diary.filter { !it.date.isBefore(schoolYearStart(today).minusYears(1)) }, school.diaryMonths,
                 school.loadedWeeks.filter { it in window }.toSet(),
-                periods, semesterPeriod, semester, feed)
+                periods, semesterPeriod, semester, feed, school.dayIcons.filterKeys { it in window })
         }
     }
 }

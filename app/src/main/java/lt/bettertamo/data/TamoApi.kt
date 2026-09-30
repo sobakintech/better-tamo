@@ -136,7 +136,7 @@ class TamoApi {
         request("core/app/darbai/namu/atlikimas", session, form = mapOf("MokinioId" to studentId, "PamokosId" to lessonId, "Atliktas" to done.toString()))
     }
     suspend fun calendar(session: SchoolSession, month: YearMonth) = mapper.calendar(request("core/app/calendar/events/allDay", session, range(month.atDay(1), month.atEndOfMonth())), month)
-    suspend fun badges(session: SchoolSession, month: YearMonth) = mapper.badges(request("core/app/calendar/badges", session, range(month.atDay(1), month.atEndOfMonth())))
+    suspend fun badges(session: SchoolSession, month: YearMonth) = request("core/app/calendar/badges", session, range(month.atDay(1), month.atEndOfMonth())).let { mapper.badges(it) to mapper.dayIcons(it) }
     suspend fun diary(session: SchoolSession, from: LocalDate, to: LocalDate) = mapper.diary(request("core/app/dienynas", session, range(from, to)))
     suspend fun notices(session: SchoolSession, remarks: Boolean, month: YearMonth): List<SchoolNotice> {
         if (!remarks) return mapper.notices(request("core/app/feeds", session).requiredList("result"), false)
@@ -393,8 +393,12 @@ class TamoMapper(private val text: (String) -> String = { it }) {
     }.distinctBy { it.id }
 
     fun badges(payload: JsonObject): Map<LocalDate, List<String>> = payload.requiredList("days").mapNotNull { day ->
-        date(day.string("date"))?.let { it to day.list("badges").map { badge -> text(badge.string("content")).ifBlank { badge.string("key") } } }
+        date(day.string("date"))?.let { it to day.list("badges").filter { it.string("contentType") != "icon" }.map { badge -> text(badge.string("content")).ifBlank { badge.string("key") } } }
     }.toMap()
+
+    fun dayIcons(payload: JsonObject): Map<LocalDate, List<String>> = payload.requiredList("days").mapNotNull { day ->
+        date(day.string("date"))?.let { it to day.list("badges").filter { badge -> badge.string("contentType") == "icon" }.map { badge -> text(badge.string("content")).ifBlank { badge.string("key") } } }
+    }.filter { it.second.isNotEmpty() }.toMap()
 
     fun diary(payload: JsonObject): List<DiaryEntry> {
         val records = payload.requiredList("items").flatMapIndexed { index, item ->

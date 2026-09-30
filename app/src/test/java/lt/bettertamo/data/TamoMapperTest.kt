@@ -113,6 +113,12 @@ class TamoMapperTest {
         assertEquals("Matematika", notices[0].subject)
     }
 
+    @Test fun dayIconsAreNotDots() {
+        val badges = mapper.badges(json("""{"days":[{"date":"2026-10-01","badges":[{"contentType":"badge","styleRef":"badge_homework","key":"homework"},{"contentType":"icon","content":"icon_birthday"}]}]}"""))
+        assertEquals(listOf("homework"), badges.getValue(LocalDate.of(2026, 10, 1)))
+        assertEquals(mapOf(LocalDate.of(2026, 10, 1) to listOf("icon_birthday")), mapper.dayIcons(json("""{"days":[{"date":"2026-10-01","badges":[{"contentType":"icon","content":"icon_birthday"}]},{"date":"2026-10-02","badges":[]}]}""")))
+    }
+
     @Test fun calendarUsesLiveFieldAliasesAndStableSubjectId() {
         val payload = json("""{"days":[{"date":"2026-09-08","events":[{"id":41,"schoolSubjectId":88,"sid":"returned-sid","eventIcon":{"content":"6"},"eventTitle":{"content":"Dailė"},"eventSubtitle":{"content":"Mokytoja"},"eventDetails":[{"key":"homework","title":{"content":"Namų darbas"},"body":{"content":"Atsinešti popieriaus"},"label":{"content":"Užduota 09.01"}}]}]}]}""")
         val lesson = mapper.week(payload, emptyList()).single()

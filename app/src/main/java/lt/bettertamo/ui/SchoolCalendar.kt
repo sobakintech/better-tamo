@@ -201,6 +201,16 @@ fun SchoolMonthGrid(month: YearMonth, selectedDate: LocalDate, onDate: (LocalDat
 }
 
 @Composable
+fun BirthdayCard() {
+    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Cake, null, tint = MaterialTheme.colorScheme.primary)
+            Text("Su gimtadieniu!", style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+@Composable
 fun SchoolEventCard(event: SchoolCalendarEvent, onClick: () -> Unit) {
     val dateFormat = DateTimeFormatter.ofPattern("MM.dd")
     Card(onClick = onClick, enabled = event.datesKnown, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)) {

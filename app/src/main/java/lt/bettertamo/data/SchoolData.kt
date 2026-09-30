@@ -41,6 +41,7 @@ data class SchoolData(
     val origins: List<Lesson> = emptyList(),
     val calendarEvents: List<SchoolCalendarEvent> = emptyList(),
     val badges: Map<LocalDate, List<String>> = emptyMap(),
+    val dayIcons: Map<LocalDate, List<String>> = emptyMap(),
     val diary: List<DiaryEntry> = emptyList(),
     val diaryMonths: Set<YearMonth> = emptySet(),
     val grades: List<Grade> = emptyList(),
