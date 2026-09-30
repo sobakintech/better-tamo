@@ -161,6 +161,12 @@ class TamoApi {
     private fun requireStudent(session: SchoolSession, what: String) {
         if (session.legacyRole != 2 || session.roles.size != 1) throw TamoFailure("Šios paskyros $what nepasiekiami.")
     }
+    suspend fun rankingSubjects(session: SchoolSession): List<Pair<String, String>> {
+        requireStudent(session, "reitingai")
+        return mapper.rankingSubjects(legacyItems(request("GetRatingSubjects", session, mapOf("personId" to session.personId), legacy = true).obj("Result")))
+    }
+    suspend fun ranking(session: SchoolSession, subjectId: String): Ranking? =
+        mapper.ranking(legacyItems(request("GetRatings", session, mapOf("personId" to session.personId, "subjectId" to subjectId), legacy = true).obj("Result")))
     suspend fun upcoming(session: SchoolSession, from: LocalDate, to: LocalDate): List<UpcomingEvent> {
         requireStudent(session, "artimiausi įvykiai")
         return mapper.upcoming(legacyItems(request("GetNextEvents", session, range(from, to), legacy = true).obj("Result")))
@@ -272,6 +278,19 @@ class TamoMapper(private val text: (String) -> String = { it }) {
         }.distinctBy { it.sid }
         val recipients = item.list("recipientSets").map { text(it.string("title")) }.filter { it.isNotBlank() }
         return MessageDetail(header.copy(read = true), item.string("body").ifBlank { item.string("bodyPlain") }, files, recipients, item.string("recipientCount").toIntOrNull())
+    }
+
+    fun rankingSubjects(items: List<JsonObject>): List<Pair<String, String>> = items.firstOrNull()?.list("subjectsInfos").orEmpty().mapNotNull { subject ->
+        val id = subject.string("Id").ifBlank { subject.string("id") }
+        val name = text(subject.string("subject"))
+        (id to name).takeIf { id.isNotBlank() && name.isNotBlank() }
+    }
+
+    fun ranking(items: List<JsonObject>): Ranking? {
+        val item = items.firstOrNull() ?: return null
+        val position = item.string("current").toIntOrNull() ?: return null
+        val averages = item.list("ratingInfos").sortedBy { it.string("nr").toIntOrNull() ?: Int.MAX_VALUE }.map { it.string("value").replace(',', '.').toDoubleOrNull() ?: return null }
+        return Ranking(position, averages).takeIf { position in 1..averages.size }
     }
 
     fun menu(result: JsonObject): List<MenuLink> = (result.list("menuGroups") + result.list("MenuGroups")).flatMap { group ->

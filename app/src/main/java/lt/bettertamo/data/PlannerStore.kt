@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CancellationException
@@ -50,6 +51,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
     val feed = MutableStateFlow(emptyList<SchoolNotice>())
     val remarks = MutableStateFlow(emptyList<SchoolNotice>())
     val upcoming = MutableStateFlow(emptyList<UpcomingEvent>())
+    val rankings = MutableStateFlow(emptyMap<String, Ranking>())
     val history = MutableStateFlow(emptyList<LessonRecord>())
     val yearLessons = MutableStateFlow(emptyList<LessonRecord>())
     val menu = MutableStateFlow(emptyList<MenuLink>())
@@ -220,7 +222,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         saveJob?.cancel()
         jobs.values.forEach { it.cancel() }; jobs.clear()
         school.value = SchoolData(); periods.value = emptyList(); semesterSubjects.value = emptyList(); chosenPeriod.value = null; feed.value = emptyList(); remarks.value = emptyList()
-        upcoming.value = emptyList(); history.value = emptyList(); yearLessons.value = emptyList(); menu.value = emptyList()
+        upcoming.value = emptyList(); history.value = emptyList(); yearLessons.value = emptyList(); menu.value = emptyList(); rankings.value = emptyMap()
         messages.value = emptyList(); messagesEnd.value = false; unreadMessages.value = 0; message.value = null
         loading.value = emptySet(); readErrors.value = emptyMap()
         requests.clear(); freshness.clear(); loadedRequests.value = emptyMap()
@@ -363,6 +365,15 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         val result = api.notices(account, true, month)
         kotlinx.coroutines.currentCoroutineContext().ensureActive()
         remarks.value = result
+    }
+
+    fun loadRankings(force: Boolean = false) = read("rankings", force = force) { account ->
+        val subjects = api.rankingSubjects(account)
+        val result = kotlinx.coroutines.coroutineScope {
+            subjects.map { (id, name) -> async { api.ranking(account, id)?.let { (if (id == "0") "" else rankingKey(name)) to it } } }.mapNotNull { it.await() }.toMap()
+        }
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        rankings.value = result
     }
 
     fun loadUpcoming(force: Boolean = false) {

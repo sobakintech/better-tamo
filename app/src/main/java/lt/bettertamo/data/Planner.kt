@@ -153,6 +153,13 @@ fun eventsOn(date: LocalDate, events: List<CustomEvent>, lessons: List<Lesson> =
 
 data class LessonProgress(val fraction: Float, val minutesLeft: Long)
 
+data class Ranking(val position: Int, val averages: List<Double>) {
+    val total get() = averages.size
+    val average get() = averages.getOrNull(position - 1)
+}
+
+fun rankingKey(subject: String) = subject.trim().lowercase()
+
 fun lessonProgress(date: LocalDate?, start: String, end: String, now: LocalDateTime): LessonProgress? {
     if (date != now.toLocalDate()) return null
     val from = runCatching { LocalTime.parse(start) }.getOrNull() ?: return null

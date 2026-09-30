@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lt.bettertamo.data.*
@@ -71,10 +73,11 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
     val feed by vm.feed.collectAsStateWithLifecycle()
     val upcoming by vm.upcoming.collectAsStateWithLifecycle()
     val yearLessons by vm.yearLessons.collectAsStateWithLifecycle()
+    val rankings by vm.rankings.collectAsStateWithLifecycle()
     var allLessons by rememberSaveable(name) { mutableStateOf(false) }
     val period = periods.find { it.id == chosen } ?: periods.find { it.selected } ?: periods.firstOrNull()
     val semester = rawSemester.takeIf { loaded["semester"] == period?.id }.orEmpty()
-    RefreshOnResume(Unit) { vm.loadPeriods(); vm.loadSchoolYear(); vm.loadFeed(); vm.loadUpcoming(); vm.loadYearLessons() }
+    RefreshOnResume(Unit) { vm.loadPeriods(); vm.loadSchoolYear(); vm.loadFeed(); vm.loadUpcoming(); vm.loadYearLessons(); vm.loadRankings() }
     RefreshOnResume(period?.id) { period?.let { vm.loadSemester(it.id) } }
     val subject = subjectOverviews(semester, school.diary.filter { it.date >= schoolYearStart() }, school.lessons).find { it.name == name }
     val entries = subject?.entries.orEmpty().sortedByDescending { it.date }
@@ -93,7 +96,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
     val container = MaterialTheme.colorScheme.surfaceContainerLowest
     PullToRefreshBox(
         isRefreshing = "year" in loading || "semester" in loading,
-        onRefresh = { vm.loadSchoolYear(true); period?.let { vm.loadSemester(it.id, true) }; vm.loadFeed(true); vm.loadUpcoming(true); vm.loadYearLessons(true) },
+        onRefresh = { vm.loadSchoolYear(true); period?.let { vm.loadSemester(it.id, true) }; vm.loadFeed(true); vm.loadUpcoming(true); vm.loadYearLessons(true); vm.loadRankings(true) },
         modifier = Modifier.fillMaxSize(),
     ) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -129,6 +132,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
                     }
                 }
             }
+            rankings[rankingKey(name)]?.let { ranking -> item { RankingCard(ranking, container) } }
             if (weekly.isNotEmpty()) {
                 item { SubjectSection("Savaitės pamokos") }
                 item {
@@ -199,6 +203,39 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+internal fun RankingCard(ranking: Ranking, container: Color) {
+    val primary = MaterialTheme.colorScheme.primary
+    val others = MaterialTheme.colorScheme.outlineVariant
+    Surface(shape = RoundedCornerShape(20.dp), color = container) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Vieta klasėje", style = MaterialTheme.typography.titleMedium)
+                    Text("Pagal vidurkį", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text("${ranking.position}", style = MaterialTheme.typography.headlineLarge, color = primary)
+                Text(" iš ${ranking.total}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            val low = (ranking.averages.minOrNull() ?: 0.0).coerceAtMost(ranking.averages.maxOrNull() ?: 0.0)
+            val floor = (low - 1.0).coerceAtLeast(0.0)
+            androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(56.dp).clearAndSetSemantics {}) {
+                val gap = 2.dp.toPx()
+                val width = (size.width - gap * (ranking.total - 1)) / ranking.total
+                val top = ranking.averages.maxOrNull() ?: 10.0
+                ranking.averages.forEachIndexed { index, value ->
+                    val share = if (top <= floor) 1f else ((value - floor) / (top - floor)).toFloat().coerceIn(0.08f, 1f)
+                    val height = size.height * share
+                    drawRoundRect(if (index == ranking.position - 1) primary else others, androidx.compose.ui.geometry.Offset(index * (width + gap), size.height - height),
+                        androidx.compose.ui.geometry.Size(width, height), androidx.compose.ui.geometry.CornerRadius(width / 3))
+                }
+            }
+            Text(listOfNotNull(ranking.average?.let { "Tavo vidurkis ${formatAverage(it)}" }, "aukščiausias ${formatAverage(ranking.averages.maxOrNull())}", "žemiausias ${formatAverage(ranking.averages.minOrNull())}").joinToString(" · "),
+                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

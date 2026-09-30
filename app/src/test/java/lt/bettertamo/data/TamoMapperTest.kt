@@ -84,6 +84,17 @@ class TamoMapperTest {
         assertFalse(mapper.week(payload, emptyList()).single().hasHomework)
     }
 
+    @Test fun rankingsParseClassPositionAndOrderedAverages() {
+        val subjects = mapper.rankingSubjects(json("""{"items":[{"studentId":1,"subjectsInfos":[{"Id":"0","subject":"Visi dalykai"},{"Id":"77","subject":"Matematika"},{"Id":"","subject":"Tuščias"}]}]}""").list("items"))
+        assertEquals(listOf("0" to "Visi dalykai", "77" to "Matematika"), subjects)
+        val ranking = mapper.ranking(json("""{"items":[{"current":"2","ratingInfos":[{"nr":"3","value":"7,5"},{"nr":"1","value":"9,8"},{"nr":"2","value":"8,25"}]}]}""").list("items"))!!
+        assertEquals(listOf(9.8, 8.25, 7.5), ranking.averages)
+        assertEquals(3, ranking.total)
+        assertEquals(8.25, ranking.average!!, 0.0)
+        assertNull(mapper.ranking(json("""{"items":[{"current":null,"ratingInfos":[]}]}""").list("items")))
+        assertNull(mapper.ranking(json("""{"items":[{"current":"5","ratingInfos":[{"nr":"1","value":"9"}]}]}""").list("items")))
+    }
+
     @Test fun calendarUsesLiveFieldAliasesAndStableSubjectId() {
         val payload = json("""{"days":[{"date":"2026-09-08","events":[{"id":41,"schoolSubjectId":88,"sid":"returned-sid","eventIcon":{"content":"6"},"eventTitle":{"content":"Dailė"},"eventSubtitle":{"content":"Mokytoja"},"eventDetails":[{"key":"homework","title":{"content":"Namų darbas"},"body":{"content":"Atsinešti popieriaus"},"label":{"content":"Užduota 09.01"}}]}]}]}""")
         val lesson = mapper.week(payload, emptyList()).single()

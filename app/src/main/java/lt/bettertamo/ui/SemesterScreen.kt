@@ -34,7 +34,8 @@ fun SubjectsOverview(openSubject: (String) -> Unit) {
     var menu by remember { mutableStateOf(false) }
     val selected = periods.find { it.id == chosen } ?: periods.find { it.selected } ?: periods.firstOrNull()
     val semester = rawSubjects.takeIf { loaded["semester"] == selected?.id }.orEmpty()
-    RefreshOnResume(Unit) { vm.loadPeriods(); vm.loadSchoolYear() }
+    val rankings by vm.rankings.collectAsStateWithLifecycle()
+    RefreshOnResume(Unit) { vm.loadPeriods(); vm.loadSchoolYear(); vm.loadRankings() }
     RefreshOnResume(selected?.id) { selected?.let { vm.loadSemester(it.id) } }
     val yearDiary = school.diary.filter { it.date >= schoolYearStart() }
     val subjects = subjectOverviews(semester, yearDiary, school.lessons)
@@ -44,7 +45,7 @@ fun SubjectsOverview(openSubject: (String) -> Unit) {
     val periodsComplete = readComplete("periods")
     PullToRefreshBox(
         isRefreshing = listOf("periods", "semester", "year").any { it in loading },
-        onRefresh = { vm.loadPeriods(true); selected?.let { vm.loadSemester(it.id, true) }; vm.loadSchoolYear(true) },
+        onRefresh = { vm.loadPeriods(true); selected?.let { vm.loadSemester(it.id, true) }; vm.loadSchoolYear(true); vm.loadRankings(true) },
         modifier = Modifier.fillMaxSize(),
     ) {
         LazyColumn(Modifier.fillMaxSize().testTag("grades-list"), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -75,8 +76,8 @@ fun SubjectsOverview(openSubject: (String) -> Unit) {
                     ReadStatus("year", showProgress = false) { vm.loadSchoolYear(true) }
                 }
             }
-            if (subjects.isNotEmpty()) item { OverviewCard(overall, subjects.count { it.average != null }, yearDiary) }
-            items(subjects, key = { it.name }) { subject -> SubjectRow(subject) { openSubject(subject.name) } }
+            if (subjects.isNotEmpty()) item { OverviewCard(overall, subjects.count { it.average != null }, yearDiary, rankings[""]) }
+            items(subjects, key = { it.name }) { subject -> SubjectRow(subject, rankings[rankingKey(subject.name)]) { openSubject(subject.name) } }
             if (subjects.isEmpty() && (semesterComplete || (periods.isEmpty() && periodsComplete)) && yearComplete) item {
                 EmptyPanel(Icons.Outlined.School, "Pažymių nėra", "Pasirinktu laikotarpiu dalykų suvestinės nėra.")
             }
@@ -85,7 +86,7 @@ fun SubjectsOverview(openSubject: (String) -> Unit) {
 }
 
 @Composable
-private fun OverviewCard(overall: Double?, graded: Int, diary: List<DiaryEntry>) {
+private fun OverviewCard(overall: Double?, graded: Int, diary: List<DiaryEntry>, ranking: Ranking?) {
     val grades = diary.count { it.kind == DiaryKind.GRADE }
     val formatives = diary.count { it.kind == DiaryKind.FORMATIVE }
     val missed = diary.count { it.missed }
@@ -96,6 +97,7 @@ private fun OverviewCard(overall: Double?, graded: Int, diary: List<DiaryEntry>)
                 Text("Bendras vidurkis", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                ranking?.let { Text("Vieta klasėje: ${it.position} iš ${it.total}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
                 Text("Įvertinti dalykai: $graded", style = MaterialTheme.typography.bodyMedium)
                 Text("Pažymiai: $grades · kaupiamieji: $formatives", style = MaterialTheme.typography.bodyMedium)
                 Text("Praleistos pamokos: $missed", style = MaterialTheme.typography.bodyMedium, color = if (missed > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
@@ -106,7 +108,7 @@ private fun OverviewCard(overall: Double?, graded: Int, diary: List<DiaryEntry>)
 }
 
 @Composable
-private fun SubjectRow(subject: SubjectOverview, onClick: () -> Unit) {
+private fun SubjectRow(subject: SubjectOverview, ranking: Ranking?, onClick: () -> Unit) {
     val recent = subject.entries.filter { it.kind != DiaryKind.ATTENDANCE }.take(6)
     Surface(onClick = onClick, color = MaterialTheme.colorScheme.surfaceContainerLowest, shape = RoundedCornerShape(16.dp)) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 10.dp, top = 14.dp, bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -123,6 +125,7 @@ private fun SubjectRow(subject: SubjectOverview, onClick: () -> Unit) {
             Column(horizontalAlignment = Alignment.End) {
                 Text(formatAverage(subject.average), style = MaterialTheme.typography.titleLarge, color = averageColor(subject.average))
                 if (subject.finalGrade.isNotBlank()) Text("Išvesta: ${subject.finalGrade}", style = MaterialTheme.typography.labelMedium)
+                ranking?.let { Text("${it.position} iš ${it.total} vieta", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
             Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
