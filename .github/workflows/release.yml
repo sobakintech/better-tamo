@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -58,10 +60,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          previous=$(git describe --tags --abbrev=0 --match 'v*' "$GITHUB_SHA^" 2>/dev/null || true)
+          {
+            echo "## Changes"
+            echo
+            git log --no-merges --format='- %s (%h)' "${previous:+$previous..}$GITHUB_SHA"
+            if [ -n "$previous" ]; then
+              echo
+              echo "**Full Changelog**: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$previous...v$VERSION"
+            fi
+          } > notes.md
           gh release create "v$VERSION" better-tamo.apk \
             --target "$GITHUB_SHA" \
             --title "$VERSION" \
-            --generate-notes
+            --notes-file notes.md
 
       - name: Remove signing key
         if: always()
