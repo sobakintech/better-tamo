@@ -8,7 +8,7 @@ import kotlinx.serialization.UseSerializers
 import java.time.YearMonth
 
 enum class DiaryKind { GRADE, FORMATIVE, ATTENDANCE }
-enum class NoticeKind { HOMEWORK, GRADE, FORMATIVE, PRAISE, REMARK, COMMENT, OTHER }
+enum class NoticeKind { HOMEWORK, GRADE, FORMATIVE, ATTENDANCE, PRAISE, REMARK, COMMENT, OTHER }
 
 @Serializable
 data class DiaryEntry(

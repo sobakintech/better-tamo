@@ -99,10 +99,11 @@ internal fun NoticeRow(notice: SchoolNotice, showDate: Boolean = false) {
                 if (notice.teacher.isNotBlank()) Text(notice.teacher, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 val text = when (notice.kind) {
                     NoticeKind.GRADE -> notice.lessonDate?.let { "Įrašyta į ${it.format(format)} pamoką" }.orEmpty()
+                    NoticeKind.ATTENDANCE -> notice.lessonDate?.let { "Įrašyta į ${it.format(format)} pamoką" } ?: attendanceLabel(notice.value)
                     NoticeKind.FORMATIVE -> listOf("Kaupiamasis", notice.text).filter { it.isNotBlank() }.joinToString(" · ") + (notice.lessonDate?.let { " · ${it.format(format)} pamoka" } ?: "")
                     else -> notice.text
                 }
-                if (text.isNotBlank()) LinkedText(text, color = if (notice.kind == NoticeKind.GRADE || notice.kind == NoticeKind.FORMATIVE) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+                if (text.isNotBlank()) LinkedText(text, color = if (notice.kind in setOf(NoticeKind.GRADE, NoticeKind.FORMATIVE, NoticeKind.ATTENDANCE)) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                 notice.deadline?.let { Text("Atlikti iki ${it.format(format)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
@@ -114,6 +115,7 @@ private fun NoticeMark(notice: SchoolNotice) {
     when (notice.kind) {
         NoticeKind.GRADE -> MarkBadge(notice.value, DiaryKind.GRADE)
         NoticeKind.FORMATIVE -> MarkBadge(notice.value, DiaryKind.FORMATIVE)
+        NoticeKind.ATTENDANCE -> MarkBadge(notice.value, DiaryKind.ATTENDANCE)
         NoticeKind.HOMEWORK -> HomeworkChip(due = true)
         NoticeKind.PRAISE -> Icon(Icons.Outlined.MarkChatRead, "Pagyrimas", tint = noticeColor(notice.kind))
         NoticeKind.REMARK -> Icon(Icons.Outlined.Feedback, "Pastaba", tint = noticeColor(notice.kind))

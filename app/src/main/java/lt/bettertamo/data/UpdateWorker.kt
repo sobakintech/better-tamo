@@ -97,6 +97,7 @@ object SchoolUpdates {
     fun describe(notice: SchoolNotice): Pair<String, String> = when (notice.kind) {
         NoticeKind.GRADE -> "Naujas pažymys: ${notice.value}" to notice.subject
         NoticeKind.FORMATIVE -> "Naujas kaupiamasis: ${notice.value}" to listOf(notice.subject, notice.text).filter { it.isNotBlank() }.joinToString(" · ")
+        NoticeKind.ATTENDANCE -> (if (notice.value == "n") "Praleista pamoka" else "Pavėluota") to notice.subject
         NoticeKind.PRAISE -> "Pagyrimas · ${notice.subject}" to notice.text
         NoticeKind.REMARK -> "Pastaba · ${notice.subject}" to notice.text
         NoticeKind.COMMENT -> "Komentaras · ${notice.subject}" to notice.text

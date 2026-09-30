@@ -104,6 +104,15 @@ class TamoMapperTest {
         assertEquals(SchoolFile("s-2", "lapas.docx"), works[1].files.single())
     }
 
+    @Test fun feedAttendanceBecomesAbsenceOrLateness() {
+        val items = listOf("1", "2").mapIndexed { index, type -> json("""{"id":"a$index","eventId":2,"date":"2026-09-28","eventDetails":{"ThingName":"Matematika","Type":"$type","Date":"2026-09-28"}}""") }
+        val notices = mapper.notices(items, false)
+        assertEquals(listOf(NoticeKind.ATTENDANCE, NoticeKind.ATTENDANCE), notices.map { it.kind })
+        assertEquals(listOf("n", "p"), notices.map { it.value })
+        assertEquals(LocalDate.of(2026, 9, 28), notices[0].lessonDate)
+        assertEquals("Matematika", notices[0].subject)
+    }
+
     @Test fun calendarUsesLiveFieldAliasesAndStableSubjectId() {
         val payload = json("""{"days":[{"date":"2026-09-08","events":[{"id":41,"schoolSubjectId":88,"sid":"returned-sid","eventIcon":{"content":"6"},"eventTitle":{"content":"Dailė"},"eventSubtitle":{"content":"Mokytoja"},"eventDetails":[{"key":"homework","title":{"content":"Namų darbas"},"body":{"content":"Atsinešti popieriaus"},"label":{"content":"Užduota 09.01"}}]}]}]}""")
         val lesson = mapper.week(payload, emptyList()).single()

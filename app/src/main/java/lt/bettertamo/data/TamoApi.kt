@@ -448,6 +448,7 @@ class TamoMapper(private val text: (String) -> String = { it }) {
             when (item.string("eventId")) {
                 "4" -> field("HomeWork").ifBlank { field("Description") }.takeUnless(::isPlaceholderHomework)?.let { SchoolNotice(id, day, subject, it, deadline = date(field("Deadline")), kind = NoticeKind.HOMEWORK, lessonDate = lessonDate) }
                 "1" -> field("Value").takeIf { it.isNotBlank() }?.let { SchoolNotice(id, day, subject, "", kind = NoticeKind.GRADE, value = it, lessonDate = lessonDate) }
+                "2" -> SchoolNotice(id, day, subject, "", kind = NoticeKind.ATTENDANCE, value = if (field("Type") == "1") "n" else "p", lessonDate = lessonDate)
                 "10" -> field("Vertinimas").takeIf { it.isNotBlank() }?.let { SchoolNotice(id, day, subject, field("Tipas"), kind = NoticeKind.FORMATIVE, value = it, lessonDate = lessonDate) }
                 "8" -> SchoolNotice(id, day, subject, field("Value"), kind = remarkKind(field("Type")), value = field("Type"), lessonDate = lessonDate)
                 else -> listOf(field("Description"), field("HomeWork"), field("Vertinimas"), field("Value")).filter { it.isNotBlank() }.distinct().joinToString("\n")

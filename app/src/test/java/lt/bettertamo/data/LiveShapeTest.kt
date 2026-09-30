@@ -99,7 +99,8 @@ class LiveShapeTest {
         assertEquals(NoticeKind.FORMATIVE, notices.getValue("4").kind)
         assertEquals("9", notices.getValue("4").value)
         assertEquals(NoticeKind.PRAISE, notices.getValue("5").kind)
-        assertFalse("6" in notices)
+        assertEquals(NoticeKind.ATTENDANCE, notices.getValue("6").kind)
+        assertEquals("n", notices.getValue("6").value)
     }
 
     @Test fun remarksUseAwardTypeAndLessonDate() {
