@@ -37,6 +37,7 @@ data class Lesson(
     val pendingFormatives: List<DiaryEntry>? = null,
 ) {
     val slotKey get() = "$weekday:$slot"
+    val key get() = date?.let { "$id@$it" } ?: id
     val start get() = startTime ?: bellTimes.getOrNull(slot - 1)?.first.orEmpty()
     val end get() = endTime ?: bellTimes.getOrNull(slot - 1)?.second.orEmpty()
     val formatives get() = details.filter { it.key == "formative" }.map { it.badge }.filter { it.isNotBlank() }
@@ -191,6 +192,9 @@ fun nowMarker(date: LocalDate, spans: List<Pair<String, String>>, now: LocalDate
     }
     return null
 }
+
+fun mergeWeek(lessons: List<Lesson>, monday: LocalDate, week: List<Lesson>): List<Lesson> =
+    (lessons.filterNot { it.date != null && mondayOf(it.date) == monday } + week).distinctBy { it.key }
 
 fun mondayOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 

@@ -358,7 +358,7 @@ class TamoMapper(private val text: (String) -> String = { it }) {
             Lesson(id, subjectId ?: "event:$id", content(event, "eventTitle").ifBlank { origin?.subject.orEmpty() }, teacher, teacher, dayDate.dayOfWeek.value, slot, "", content(event, "eventDescription").ifBlank { origin?.topic.orEmpty() }, dayDate, from?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")) ?: "", to?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")) ?: "", sid, details + formativeDetails, subjectId != null,
                 marks.distinct().joinToString(" · ").ifBlank { details.filter { it.key == "grade" }.joinToString(" · ") { it.badge } }, text(label.string("content")), important, note, average, trend, pendingFormatives)
         }
-    }.distinctBy { it.id }
+    }.distinctBy { it.key }
 
     fun homework(payload: JsonObject): List<Homework> = payload.requiredList("items").mapNotNull { item ->
         val files = item.list("files").mapNotNull { file ->

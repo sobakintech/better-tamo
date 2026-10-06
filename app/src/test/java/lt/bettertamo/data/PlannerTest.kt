@@ -22,6 +22,14 @@ class PlannerTest {
         assertEquals(listOf("Biologija", "Chemija"), names)
     }
 
+    @Test fun `unrecorded lessons sharing an id survive loading the next week`() {
+        val lastFriday = Lesson("77", "geo", "Geografija", "", "", 5, 5, "", date = LocalDate.of(2026, 10, 2))
+        val friday = lastFriday.copy(date = LocalDate.of(2026, 10, 9))
+        val merged = mergeWeek(listOf(lastFriday), mondayOf(friday.date!!), listOf(friday))
+        assertEquals(listOf(lastFriday.date, friday.date), merged.map { it.date })
+        assertEquals(listOf(friday), mergeWeek(merged, mondayOf(lastFriday.date!!), emptyList()))
+    }
+
     @Test fun `same teacher and subject split by weekly lesson slots`() {
         val grammar = DemoData.lessons.first { it.id == "1-3" }
         val literature = DemoData.lessons.first { it.id == "2-1" }

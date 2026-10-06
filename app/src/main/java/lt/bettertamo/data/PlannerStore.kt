@@ -271,7 +271,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
             val calendar = api.week(account, monday)
             val lessons = api.mapper.week(calendar, emptyList())
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            school.value = school.value.copy(lessons = (school.value.lessons.filterNot { it.date != null && mondayOf(it.date) == monday } + lessons).distinctBy { it.id }, weekLoaded = monday, loadedWeeks = school.value.loadedWeeks + monday)
+            school.value = school.value.copy(lessons = mergeWeek(school.value.lessons, monday, lessons), weekLoaded = monday, loadedWeeks = school.value.loadedWeeks + monday)
         }
     }
 
@@ -302,7 +302,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
                 sourceLessons += api.mapper.week(api.week(account, week), emptyList())
             }
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            school.value = school.value.copy(homework = work, lessons = (school.value.lessons + sourceLessons).distinctBy { it.id }, homeworkLoaded = key, loadedWeeks = school.value.loadedWeeks + weeks)
+            school.value = school.value.copy(homework = work, lessons = (school.value.lessons + sourceLessons).distinctBy { it.key }, homeworkLoaded = key, loadedWeeks = school.value.loadedWeeks + weeks)
         }
     }
 

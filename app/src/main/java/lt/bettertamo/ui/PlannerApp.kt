@@ -226,7 +226,7 @@ private fun PlannerContent(state: PlannerState, vm: PlannerViewModel) {
     }
 
     lessonSheet?.let { id ->
-        val lesson = school.lessons.find { it.id == id }
+        val lesson = school.lessons.find { it.key == id }
         if (lesson == null) lessonSheet = null
         else LessonSheet(lesson, state, onDismiss = { lessonSheet = null },
             openSubject = { lessonSheet = null; openSubject(lesson.subject) })
@@ -343,7 +343,7 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
                             LessonCard(subject.name, lesson.topic, start = lesson.start, end = lesson.end, slot = lesson.slot,
                                 dueHomework = lesson.hasHomework, assignedHomework = lesson.details.any { it.key == "homework_next" } || school.homework.any { it.lessonId == lesson.id },
                                 assessment = lesson.assessment, lessonLabel = lesson.label, important = lesson.highlighted, remark = lesson.note, formatives = lesson.formatives, average = lesson.average, trend = lesson.trend,
-                                active = lessonProgress(lesson.date, lesson.start, lesson.end, now) != null) { openLesson(lesson.id) }
+                                active = lessonProgress(lesson.date, lesson.start, lesson.end, now) != null) { openLesson(lesson.key) }
                         }
                         entry.event?.let { event ->
                             LessonCard(event.title, event.note, custom = true, start = event.start, end = event.end, slot = event.slot.takeIf { it > 0 },
@@ -396,7 +396,7 @@ internal fun TimetableList(isRefreshing: Boolean, onRefresh: () -> Unit, marker:
 data class Gap(val start: String, val end: String, val slot: Int?)
 
 private data class TimetableEntry(val start: String, val lesson: Lesson? = null, val event: CustomEvent? = null, val gap: Gap? = null) {
-    val key get() = gap?.let { "gap-${it.start}" } ?: lesson?.id ?: "event-${event!!.id}"
+    val key get() = gap?.let { "gap-${it.start}" } ?: lesson?.key ?: "event-${event!!.id}"
     val span get() = lesson?.let { it.start to it.end } ?: event?.let { it.start to it.end } ?: gap!!.let { it.start to it.end }
 }
 
