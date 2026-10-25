@@ -44,6 +44,18 @@ private fun recordLesson(record: LessonRecord, known: List<Lesson>, rules: List<
     return Lesson("record:${record.id}", subjectId, record.subject, teacher, teacher, record.date.dayOfWeek.value, record.slot, "", date = record.date)
 }
 
+data class LessonAverage(val name: String, val average: Double, val count: Int)
+
+data class LessonSplit(val averages: List<LessonAverage>, val unlinked: Int)
+
+fun lessonSplit(subject: String, entries: List<DiaryEntry>, names: Map<String, String>): LessonSplit? {
+    val marks = entries.filter { it.numeric != null }
+    val groups = marks.filter { it.id in names }.groupBy { names.getValue(it.id) }
+    val unlinked = marks.count { it.id !in names }
+    if (groups.keys.none { it != subject } || (groups.size < 2 && unlinked == 0)) return null
+    return LessonSplit(groups.map { (name, list) -> LessonAverage(name, list.mapNotNull { it.numeric }.average(), list.size) }.sortedBy { it.name.lowercase() }, unlinked)
+}
+
 fun gradeAverage(grades: List<Int>): Double? {
     require(grades.all { it in 1..10 })
     return if (grades.isEmpty()) null else grades.average()

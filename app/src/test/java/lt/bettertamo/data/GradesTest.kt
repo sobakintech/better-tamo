@@ -83,4 +83,17 @@ class GradesTest {
         assertEquals(mapOf("g1" to "Biologija", "g2" to "Fizika"), entryLessonNames(entries, lessons, records, rules))
     }
 
+    @Test fun `split averages count only linked grades`() {
+        val entries = listOf(
+            DiaryEntry("g1", "Fizika", tuesday, "9", ""), DiaryEntry("g2", "Fizika", tuesday, "7", ""),
+            DiaryEntry("g3", "Fizika", tuesday, "4", ""), DiaryEntry("g4", "Fizika", tuesday, "10", ""),
+            DiaryEntry("a1", "Fizika", tuesday, "n", "", DiaryKind.ATTENDANCE),
+        )
+        val split = lessonSplit("Fizika", entries, mapOf("g1" to "Astronomija", "g2" to "Astronomija", "g3" to "Fizika", "a1" to "Astronomija"))!!
+        assertEquals(listOf(LessonAverage("Astronomija", 8.0, 2), LessonAverage("Fizika", 4.0, 1)), split.averages)
+        assertEquals(1, split.unlinked)
+        assertNull(lessonSplit("Fizika", entries.take(3), mapOf("g1" to "Fizika", "g2" to "Fizika", "g3" to "Fizika")))
+        assertNull(lessonSplit("Fizika", entries.take(2), mapOf("g1" to "Astronomija", "g2" to "Astronomija")))
+        assertNotNull(lessonSplit("Fizika", entries.take(3), mapOf("g1" to "Astronomija", "g2" to "Astronomija")))
+    }
 }

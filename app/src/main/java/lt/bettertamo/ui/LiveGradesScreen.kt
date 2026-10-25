@@ -91,6 +91,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
     val unused = formatives.filter { it.converted == false }
     val rules = vm.state.collectAsStateWithLifecycle().value?.rules.orEmpty()
     val names = remember(entries, formatives, school.lessons, yearLessons, rules) { entryLessonNames(entries + formatives, school.lessons, yearLessons, rules) }
+    val split = lessonSplit(name, marks, names)
     val lessonNames = remember(yearLessons, school.lessons, rules) { recordLessonNames(yearLessons, school.lessons, rules) }
     val tests = upcoming.filter { name.lowercase() in it.title.lowercase() }
     val lessons = yearLessons.filter { it.subject == name }.sortedByDescending { it.date }
@@ -139,6 +140,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
                     }
                 }
             }
+            split?.let { item { LessonSplitCard(it, container) } }
             rankings[rankingKey(name)]?.let { ranking -> item { RankingCard(ranking, container) } }
             if (weekly.isNotEmpty()) {
                 item { SubjectSection("Savaitės pamokos") }
@@ -280,6 +282,32 @@ private fun formativeStats(unused: List<DiaryEntry>): List<Pair<String, String>>
         unused.any { it.percents != null } -> listOf("Vidurkis" to "${unused.mapNotNull { it.percents }.average().roundToInt()} %", count)
         else -> listOf("Vidurkis" to formatAverage(values.mapNotNull { it.replace(',', '.').toDoubleOrNull()?.takeIf { value -> value in 1.0..10.0 } }.takeIf { it.isNotEmpty() }?.average()), count)
     }
+}
+
+@Composable
+private fun LessonSplitCard(split: LessonSplit, container: Color) {
+    EntryCard(container) {
+        Column {
+            Text("Pagal pamokas", style = MaterialTheme.typography.titleMedium)
+            Text("Programos vidurkis iš šių mokslo metų pažymių", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        split.averages.forEach { lesson ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(lesson.name, style = MaterialTheme.typography.titleSmall)
+                    Text("${lesson.count} ${gradeWord(lesson.count)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text(formatAverage(lesson.average), style = MaterialTheme.typography.titleLarge, color = averageColor(lesson.average))
+            }
+        }
+        if (split.unlinked > 0) Text("Nepriskirta pamokai: ${split.unlinked}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+private fun gradeWord(count: Int) = when {
+    count % 10 == 1 && count % 100 != 11 -> "pažymys"
+    count % 10 in 2..9 && count % 100 !in 12..19 -> "pažymiai"
+    else -> "pažymių"
 }
 
 @Composable
