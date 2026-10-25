@@ -99,7 +99,8 @@ fun MarkBadge(value: String, kind: DiaryKind, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun DiaryRow(entry: DiaryEntry, showSubject: Boolean = true, trailing: @Composable (() -> Unit)? = null) {
+fun DiaryRow(entry: DiaryEntry, showSubject: Boolean = true, lessonName: String? = null, trailing: @Composable (() -> Unit)? = null) {
+    val renamed = lessonName?.takeIf { it != entry.subject }
     val description = when (entry.kind) {
         DiaryKind.FORMATIVE -> listOf("Kaupiamasis", entry.title).filter { it.isNotBlank() }.joinToString(" · ")
         DiaryKind.ATTENDANCE -> attendanceLabel(entry.value)
@@ -110,9 +111,9 @@ fun DiaryRow(entry: DiaryEntry, showSubject: Boolean = true, trailing: @Composab
             MarkBadge(entry.value, entry.kind, Modifier.width(44.dp))
             VerticalDivider(Modifier.fillMaxHeight().heightIn(min = 28.dp), color = MaterialTheme.colorScheme.outlineVariant)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(if (showSubject) entry.subject else description.ifBlank { entry.subject }, style = MaterialTheme.typography.titleMedium)
+                Text(if (showSubject) renamed ?: entry.subject else description.ifBlank { renamed ?: entry.subject }, style = MaterialTheme.typography.titleMedium)
                 if (showSubject && description.isNotBlank()) Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (!showSubject) Text(entry.date.format(DateTimeFormatter.ofPattern("MM.dd")) + " · " + dayLong[entry.date.dayOfWeek.value - 1].lowercase(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (!showSubject) Text(listOfNotNull(entry.date.format(DateTimeFormatter.ofPattern("MM.dd")), dayLong[entry.date.dayOfWeek.value - 1].lowercase(), renamed?.takeIf { description.isNotBlank() }).joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             trailing?.invoke()
         }

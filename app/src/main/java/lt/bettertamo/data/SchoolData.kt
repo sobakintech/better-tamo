@@ -94,7 +94,7 @@ data class UpcomingEvent(val id: String, val start: LocalDate, val end: LocalDat
     val holiday get() = "atostog" in title.lowercase() || "šventė" in title.lowercase() || "nedirb" in title.lowercase()
 }
 @Serializable
-data class LessonRecord(val id: String, val date: LocalDate, val subject: String, val teacher: String, val topic: String, val homework: String, val classwork: String, val deadline: LocalDate?)
+data class LessonRecord(val id: String, val date: LocalDate, val subject: String, val teacher: String, val topic: String, val homework: String, val classwork: String, val deadline: LocalDate?, val slot: Int = 0)
 @Serializable
 data class MenuLink(val id: String, val group: String, val title: String, val url: String, val auth: Boolean)
 

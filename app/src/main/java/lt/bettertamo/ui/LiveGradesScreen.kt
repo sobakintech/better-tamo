@@ -46,7 +46,11 @@ private fun DiaryTab() {
     var monthText by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
     val month = YearMonth.parse(monthText)
     RefreshOnResume(month) { vm.loadDiary(month) }
+    val rules = vm.state.collectAsStateWithLifecycle().value?.rules.orEmpty()
+    val yearLessons by vm.yearLessons.collectAsStateWithLifecycle()
+    RefreshOnResume(rules.isNotEmpty()) { if (rules.isNotEmpty()) vm.loadYearLessons() }
     val diary = school.diary.filter { YearMonth.from(it.date) == month }
+    val names = remember(diary, school.lessons, yearLessons, rules) { entryLessonNames(diary, school.lessons, yearLessons, rules) }
     val complete = readComplete("diary", month.toString())
     Column {
         MonthNavigation(month, { monthText = it.toString() }, { vm.loadDiary(month, true) }, "Atnaujinti pažymius")
@@ -54,7 +58,7 @@ private fun DiaryTab() {
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             diary.groupBy { it.date }.toSortedMap(reverseOrder()).forEach { (date, entries) ->
                 item("day-$date") { DayHeading(date) }
-                items(entries.sortedWith(compareBy({ it.kind.ordinal }, { it.subject })), key = { it.id }) { entry -> DiaryRow(entry) }
+                items(entries.sortedWith(compareBy({ it.kind.ordinal }, { it.subject })), key = { it.id }) { entry -> DiaryRow(entry, lessonName = names[entry.id]) }
             }
             if (complete && diary.isEmpty()) item { EmptyPanel(Icons.Outlined.School, "Įrašų nėra", "Šį mėnesį pažymių ir lankomumo įrašų nėra. Pasirink kitą mėnesį.") }
         }
@@ -85,6 +89,9 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
     val attendance = entries.filter { it.kind == DiaryKind.ATTENDANCE }
     val formatives = subjectFormatives(entries, school.lessons.filter { it.subject == name && it.date != null }.maxByOrNull { it.date!! }?.pendingFormatives)
     val unused = formatives.filter { it.converted == false }
+    val rules = vm.state.collectAsStateWithLifecycle().value?.rules.orEmpty()
+    val names = remember(entries, formatives, school.lessons, yearLessons, rules) { entryLessonNames(entries + formatives, school.lessons, yearLessons, rules) }
+    val lessonNames = remember(yearLessons, school.lessons, rules) { recordLessonNames(yearLessons, school.lessons, rules) }
     val tests = upcoming.filter { name.lowercase() in it.title.lowercase() }
     val lessons = yearLessons.filter { it.subject == name }.sortedByDescending { it.date }
     val today = java.time.LocalDate.now()
@@ -166,7 +173,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
                     }
                 }
                 items(formatives, key = { "formative-${it.id}" }) { entry ->
-                    DiaryRow(entry, showSubject = false) {
+                    DiaryRow(entry, showSubject = false, lessonName = names[entry.id]) {
                         when (entry.converted) {
                             false -> SmallTag("Nepanaudotas", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
                             true -> SmallTag("Panaudotas", MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.colorScheme.onSurfaceVariant)
@@ -176,12 +183,12 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
                 }
             }
             item { SubjectSection("Pažymiai šiais mokslo metais") }
-            items(marks, key = { "mark-${it.id}" }) { entry -> DiaryRow(entry, showSubject = false) }
+            items(marks, key = { "mark-${it.id}" }) { entry -> DiaryRow(entry, showSubject = false, lessonName = names[entry.id]) }
             if (marks.isEmpty() && yearComplete) item { SubjectEmpty("Šio dalyko pažymių dar nėra.") }
             if (lessons.isNotEmpty() || "year-lessons" in loading) {
                 item { SubjectSection("Pamokų istorija" + if (lessons.isNotEmpty()) " (${lessons.size})" else "") }
                 item { ReadStatus("year-lessons") { vm.loadYearLessons(true) } }
-                items(if (allLessons) lessons else lessons.take(5), key = { "lesson-${it.id}" }) { record -> SubjectLessonRow(record) { openDate(record.date) } }
+                items(if (allLessons) lessons else lessons.take(5), key = { "lesson-${it.id}" }) { record -> SubjectLessonRow(record, lessonNames[record.id]?.takeIf { it != name }) { openDate(record.date) } }
                 if (lessons.size > 5) item {
                     TextButton(onClick = { allLessons = !allLessons }, modifier = Modifier.fillMaxWidth()) {
                         Text(if (allLessons) "Rodyti mažiau" else "Rodyti visas pamokas (${lessons.size})")
@@ -194,7 +201,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
             }
             if (attendance.isNotEmpty()) {
                 item { SubjectSection("Lankomumas") }
-                items(attendance, key = { "attendance-${it.id}" }) { entry -> DiaryRow(entry, showSubject = false) }
+                items(attendance, key = { "attendance-${it.id}" }) { entry -> DiaryRow(entry, showSubject = false, lessonName = names[entry.id]) }
             }
             school.lessons.filter { it.subject == name && it.canRename }.maxByOrNull { it.date ?: java.time.LocalDate.MIN }?.let { lesson ->
                 item {
@@ -241,7 +248,7 @@ internal fun RankingCard(ranking: Ranking, container: Color) {
 }
 
 @Composable
-private fun SubjectLessonRow(record: LessonRecord, onClick: () -> Unit) {
+private fun SubjectLessonRow(record: LessonRecord, lessonName: String?, onClick: () -> Unit) {
     val today = java.time.LocalDate.now()
     Card(onClick = onClick, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(horizontal = 14.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -252,6 +259,7 @@ private fun SubjectLessonRow(record: LessonRecord, onClick: () -> Unit) {
             }
             VerticalDivider(Modifier.fillMaxHeight(), color = MaterialTheme.colorScheme.outlineVariant)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                lessonName?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Text(record.topic.ifBlank { "Tema neįrašyta" }, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     color = if (record.topic.isBlank() || record.date.isAfter(today)) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
                 if (record.homework.isNotBlank()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

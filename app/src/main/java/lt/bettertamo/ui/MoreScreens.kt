@@ -297,6 +297,8 @@ fun LessonHistoryScreen(state: PlannerState, back: () -> Unit) {
     RefreshOnResume(month) { vm.loadHistory(month) }
     val complete = readComplete("history", month.toString())
     val shown = records.takeIf { vm.loadedRequests.collectAsStateWithLifecycle().value["history"] == month.toString() }.orEmpty()
+    val lessons = LocalSchoolData.current.lessons
+    val names = remember(shown, lessons, state.rules) { recordLessonNames(shown, lessons, state.rules) }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Pamokų istorija", back)
         MonthNavigation(month, { monthText = it.toString() }, { vm.loadHistory(month, true) }, "Atnaujinti pamokas")
@@ -306,7 +308,7 @@ fun LessonHistoryScreen(state: PlannerState, back: () -> Unit) {
                 if (complete && shown.isEmpty()) item { EmptyPanel(Icons.AutoMirrored.Outlined.MenuBook, "Pamokų nėra", "Šį mėnesį pamokų įrašų nėra. Pasirink kitą mėnesį.") }
                 shown.groupBy { it.date }.toSortedMap(reverseOrder()).forEach { (date, entries) ->
                     item("day-$date") { DayHeading(date) }
-                    items(entries, key = { it.id }) { record -> LessonRecordCard(record, LocalSchoolData.current.origin(record.id)?.let { resolveSubject(it, state.rules).name } ?: record.subject) }
+                    items(entries, key = { it.id }) { record -> LessonRecordCard(record, names[record.id] ?: record.subject) }
                 }
             }
         }

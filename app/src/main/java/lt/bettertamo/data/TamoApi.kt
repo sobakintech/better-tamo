@@ -254,7 +254,8 @@ class TamoMapper(private val text: (String) -> String = { it }) {
     fun lessonRecords(items: List<JsonObject>): List<LessonRecord> = items.mapIndexedNotNull { index, item ->
         val day = looseDate(item.string("subjectDate")) ?: return@mapIndexedNotNull null
         LessonRecord(item.string("id").takeIf { it.isNotBlank() && it != "0" } ?: "$day:$index", day, text(item.string("subjectName")), text(item.string("teacherName")), text(item.string("subjectTheme")),
-            text(item.string("homeWork")), text(item.string("classWork")), looseDate(item.string("hwDeadline")) ?: looseDate(item.string("dateDeadline")))
+            text(item.string("homeWork")), text(item.string("classWork")), looseDate(item.string("hwDeadline")) ?: looseDate(item.string("dateDeadline")),
+            item.string("subjectSerialNumber").toIntOrNull()?.takeIf { it in 1..30 } ?: 0)
     }
 
     private fun dateTime(value: String): LocalDateTime? = runCatching { LocalDateTime.parse(value.take(19)) }.getOrNull()

@@ -30,13 +30,14 @@ class ExtrasShapeTest {
 
     @Test fun lessonRecordsKeepHomeworkAndClasswork() {
         val records = mapper.lessonRecords(items("""[
-            {"id":55,"subjectDate":"2026-09-25","subjectName":"Geografija","teacherName":"Vilma","subjectTheme":"Oro judėjimas","homeWork":"Vad. 12 psl.","classWork":"","hwDeadline":"2026-10-01"},
+            {"id":55,"subjectDate":"2026-09-25","subjectName":"Geografija","teacherName":"Vilma","subjectTheme":"Oro judėjimas","homeWork":"Vad. 12 psl.","classWork":"","hwDeadline":"2026-10-01","subjectSerialNumber":4},
             {"id":56,"subjectDate":"bad","subjectName":"X"}
         ]"""))
         val record = records.single()
         assertEquals("55", record.id)
         assertEquals("Vad. 12 psl.", record.homework)
         assertEquals(LocalDate.of(2026, 10, 1), record.deadline)
+        assertEquals(4, record.slot)
     }
 
     @Test fun additionalMenuFlattensGroupsWithLinks() {
