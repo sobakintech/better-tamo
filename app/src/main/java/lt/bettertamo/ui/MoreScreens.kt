@@ -85,6 +85,9 @@ fun MoreScreen(back: () -> Unit, open: (String) -> Unit) {
     val accent by vm.accent.collectAsStateWithLifecycle()
     var signOut by remember { mutableStateOf(false) }
     var switchAccount by remember { mutableStateOf(false) }
+    var exporting by remember { mutableStateOf(false) }
+    var importing by remember { mutableStateOf<SettingsExport?>(null) }
+    val pickImport = rememberSettingsImport { importing = it }
     val uriHandler = LocalUriHandler.current
     RefreshOnResume(Unit) { vm.loadMenu() }
     val role = account?.roles?.firstOrNull { it.id == account?.selectedRole }
@@ -132,6 +135,8 @@ fun MoreScreen(back: () -> Unit, open: (String) -> Unit) {
                     MenuRow(Icons.Outlined.Tune, "Mano pamokos", Modifier.testTag("open-personalization"), subtitle = "Pamokų pavadinimai ir tavo įvykiai", onClick = { open("personalization") })
                     NotificationSetting()
                     ThemeSetting(state?.theme ?: "system", vm::setTheme, Accent.from(accent), vm::setAccent)
+                    MenuRow(Icons.Outlined.Upload, "Eksportuoti nustatymus", subtitle = "Į failą kitam įrenginiui", onClick = { if (state != null) exporting = true })
+                    MenuRow(Icons.Outlined.Download, "Importuoti nustatymus", subtitle = "Iš eksportuoto failo", onClick = pickImport)
                 }
             }
             item {
@@ -160,6 +165,8 @@ fun MoreScreen(back: () -> Unit, open: (String) -> Unit) {
             }
         }
     }, confirmButton = { TextButton(onClick = { switchAccount = false }) { Text("Uždaryti") } })
+    state?.takeIf { exporting }?.let { SettingsExportDialog(it, accent) { exporting = false } }
+    importing?.let { SettingsImportDialog(it) { importing = null } }
     if (signOut) AlertDialog(onDismissRequest = { signOut = false }, title = { Text("Atsijungti?") }, confirmButton = { TextButton(onClick = { signOut = false; vm.signOut() }) { Text("Atsijungti") } }, dismissButton = { TextButton(onClick = { signOut = false }) { Text("Atšaukti") } })
 }
 

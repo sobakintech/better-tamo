@@ -571,6 +571,36 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         it.copy(events = it.events.filterNot { saved -> saved.id == event.id } + event)
     }
     fun deleteEvent(id: String) = update { it.copy(events = it.events.filterNot { event -> event.id == id }) }
+    suspend fun exportSettings(uri: android.net.Uri, parts: Set<SettingsPart>): Boolean {
+        val current = state.value ?: return false
+        val text = encodeSettings(settingsExport(current, accent.value, parts, lt.bettertamo.BuildConfig.VERSION_NAME))
+        return try {
+            withContext(Dispatchers.IO) { getApplication<Application>().contentResolver.openOutputStream(uri, "wt")!!.use { it.write(text.toByteArray()) } }
+            true
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { error.value = "Nustatymų eksportuoti nepavyko."; false }
+    }
+
+    suspend fun readSettings(uri: android.net.Uri): SettingsExport? = try {
+        withContext(Dispatchers.IO) {
+            val text = getApplication<Application>().contentResolver.openInputStream(uri)!!.use { it.readBytes() }.takeIf { it.size <= 1_000_000 }?.decodeToString()
+                ?: throw SettingsFormatException("Failas per didelis.")
+            decodeSettings(text)
+        }
+    } catch (e: CancellationException) { throw e }
+    catch (e: SettingsFormatException) { error.value = e.message; null }
+    catch (_: Exception) { error.value = "Nustatymų failo perskaityti nepavyko."; null }
+
+    fun applySettings(export: SettingsExport, parts: Set<SettingsPart>) {
+        update { importSettings(it, export, parts) }
+        val appearance = export.appearance?.takeIf { SettingsPart.APPEARANCE in parts } ?: return
+        if (appearance.theme in appThemes) viewModelScope.launch {
+            try { store.edit { it[stringPreferencesKey("appearance")] = appearance.theme } }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { error.value = "Išvaizdos išsaugoti nepavyko. Bandykite dar kartą." }
+        }
+        appearance.accent?.let(::setAccent)
+    }
     fun setAccent(key: String) {
         accent.value = key
         ui.edit { putString("accent", key) }
