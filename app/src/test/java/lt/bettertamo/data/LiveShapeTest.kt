@@ -146,6 +146,11 @@ class LiveShapeTest {
         assertEquals(setOf(YearMonth.of(2026, 9)), restored.school().diaryMonths)
     }
 
+    @Test fun allDayEventsWithoutIdsAreNotLessons() {
+        val holiday = json("""{"days":[{"date":"2026-11-01","events":[{"displayType":"allday","type":"public-holiday","id":0,"eventTitle":{"content":"Visų šventųjų diena"},"eventLabel":{"content":"Valstybinė šventė"}}]}]}""")
+        assertTrue(mapper.week(holiday, emptyList()).isEmpty())
+    }
+
     @Test fun runningAverageAndTrendAreKept() {
         val lesson = mapper.week(week, emptyList()).single { it.id == "4" }
         assertEquals("5", lesson.average)

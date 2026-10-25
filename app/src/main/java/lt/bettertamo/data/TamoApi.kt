@@ -318,7 +318,7 @@ class TamoMapper(private val text: (String) -> String = { it }) {
 
     fun week(payload: JsonObject, origins: List<Lesson>): List<Lesson> = payload.requiredList("days").flatMap { day ->
         val dayDate = date(day.string("date")) ?: throw TamoFailure("Neatpažinta tvarkaraščio data.")
-        day.requiredList("events").map { event ->
+        day.requiredList("events").filter { it.string("displayType") != "allday" }.map { event ->
             val sid = event.string("sid")
             val id = event.string("id").takeIf { it.isNotBlank() && it != "0" } ?: sid
             if (id.isBlank()) throw TamoFailure("TAMO negrąžino pamokos identifikatoriaus.")
