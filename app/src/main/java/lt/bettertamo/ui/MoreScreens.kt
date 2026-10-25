@@ -272,7 +272,7 @@ fun UpcomingScreen(back: () -> Unit, openDate: (LocalDate) -> Unit) {
 }
 
 @Composable
-internal fun UpcomingCard(event: UpcomingEvent, showDate: Boolean = false, onClick: () -> Unit) {
+private fun UpcomingCard(event: UpcomingEvent, onClick: () -> Unit) {
     val split = event.title.indexOf(": ")
     val type = if (split > 0 && !event.holiday) event.title.take(split) else ""
     val title = if (type.isNotEmpty()) event.title.drop(split + 2) else event.title
@@ -285,8 +285,7 @@ internal fun UpcomingCard(event: UpcomingEvent, showDate: Boolean = false, onCli
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (type.isNotEmpty()) Text(type.uppercase(Locale.forLanguageTag("lt")), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp), color = accent)
                 Text(title, style = MaterialTheme.typography.titleMedium)
-                val days = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), event.start)
-                val meta = listOfNotNull(if (showDate && event.end == null) "${dayLong[event.start.dayOfWeek.value - 1]}, ${event.start.format(shortDate)} · " + when (days) { 0L -> "šiandien"; 1L -> "rytoj"; 2L -> "poryt"; else -> "po $days d." } else null, event.end?.let { "${event.start.format(shortDate)}–${it.format(shortDate)}" }, event.time.takeIf { it.isNotBlank() })
+                val meta = listOfNotNull(event.end?.let { "${event.start.format(shortDate)}–${it.format(shortDate)}" }, event.time.takeIf { it.isNotBlank() })
                 if (meta.isNotEmpty()) Text(meta.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (event.body.isNotBlank() && event.body != event.title && !(event.end != null && event.body.startsWith("Nuo "))) Text(event.body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

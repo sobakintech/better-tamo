@@ -14,7 +14,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -94,6 +96,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
     val split = lessonSplit(name, marks, names)
     val lessonNames = remember(yearLessons, school.lessons, rules) { recordLessonNames(yearLessons, school.lessons, rules) }
     val tests = upcoming.filter { name.lowercase() in it.title.lowercase() }
+    val testNames = remember(tests, school.lessons, yearLessons, rules) { upcomingLessonNames(tests, name, school.lessons, yearLessons, rules) }
     val lessons = yearLessons.filter { it.subject == name }.sortedByDescending { it.date }
     val today = java.time.LocalDate.now()
     val subjectLessons = school.lessons.filter { it.subject == name && it.date != null }
@@ -162,7 +165,7 @@ fun SubjectDetailScreen(name: String, openDate: (java.time.LocalDate) -> Unit, r
             }
             if (tests.isNotEmpty()) {
                 item { SubjectSection("Artimiausi atsiskaitymai") }
-                items(tests, key = { "test-${it.id}" }) { event -> UpcomingCard(event, showDate = true) { openDate(event.start) } }
+                items(tests, key = { "test-${it.id}" }) { event -> SubjectTestRow(event, name, testNames[event.id]) { openDate(event.start) } }
             }
             if (formatives.isNotEmpty()) {
                 item { SubjectSection("Kaupiamieji") }
@@ -268,6 +271,31 @@ private fun SubjectLessonRow(record: LessonRecord, lessonName: String?, onClick:
                     HomeworkChip(due = false)
                     Text(record.homework, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubjectTestRow(event: UpcomingEvent, subject: String, lessonName: String?, onClick: () -> Unit) {
+    val split = event.title.indexOf(": ")
+    val type = if (split > 0) event.title.take(split) else ""
+    val title = (if (type.isNotEmpty()) event.title.drop(split + 2) else event.title).let { if (lessonName != null) it.replace(subject, lessonName, ignoreCase = true) else it }
+    val days = java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), event.start)
+    val meta = listOf(when (days) { 0L -> "Šiandien"; 1L -> "Rytoj"; 2L -> "Poryt"; else -> "Po $days d." }) + listOfNotNull(event.time.takeIf { it.isNotBlank() })
+    Card(onClick = onClick, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(horizontal = 14.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.widthIn(min = 44.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(event.start.format(java.time.format.DateTimeFormatter.ofPattern("MM.dd")), style = MaterialTheme.typography.titleSmall,
+                    color = if (days == 0L) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                Text(dayShort[event.start.dayOfWeek.value - 1], style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            VerticalDivider(Modifier.fillMaxHeight(), color = MaterialTheme.colorScheme.outlineVariant)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                if (type.isNotEmpty()) Text(type.uppercase(java.util.Locale.forLanguageTag("lt")), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp), color = MaterialTheme.colorScheme.error)
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(meta.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (event.body.isNotBlank() && event.body != event.title) Text(event.body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

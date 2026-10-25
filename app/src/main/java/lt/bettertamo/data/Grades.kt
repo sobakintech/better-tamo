@@ -31,6 +31,19 @@ fun recordLessonNames(records: List<LessonRecord>, lessons: List<Lesson>, rules:
     }.toMap()
 }
 
+fun upcomingLessonNames(events: List<UpcomingEvent>, subject: String, lessons: List<Lesson>, records: List<LessonRecord>, rules: List<LessonRule>): Map<String, String> {
+    if (rules.isEmpty()) return emptyMap()
+    val known = lessons.filter { it.date != null && subjectKey(it.subject) == subjectKey(subject) }
+    return events.mapNotNull { event ->
+        val time = Regex("\\d{1,2}:\\d{2}").find(event.time)?.value?.padStart(5, '0')
+        val day = known.filter { it.date == event.start }.let { day -> day.filter { it.important || it.label.isNotBlank() }.ifEmpty { day } }
+        val candidates = day.filter { it.start == time }.ifEmpty { day }.ifEmpty {
+            records.filter { it.date == event.start && subjectKey(it.subject) == subjectKey(subject) }.map { recordLesson(it, known, rules) ?: return@mapNotNull null }
+        }
+        candidates.map { resolveSubject(it, rules).name }.distinct().singleOrNull()?.takeIf { it != subject }?.let { event.id to it }
+    }.toMap()
+}
+
 private fun subjectKey(name: String) = name.trim().lowercase()
 
 private fun personKey(name: String) = name.lowercase().split(Regex("\\s+")).filter { it.isNotBlank() }.sorted().joinToString(" ")

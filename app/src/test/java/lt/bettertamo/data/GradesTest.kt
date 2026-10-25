@@ -74,6 +74,18 @@ class GradesTest {
         assertTrue(entryLessonNames(entries, lessons, emptyList(), slotRule).isEmpty())
     }
 
+    @Test fun `upcoming tests take the name of the lesson they are held in`() {
+        val rules = listOf(LessonRule("r", "phy", "Astronomija", MatchMode.SLOTS, setOf("2:3")))
+        val lessons = listOf(lesson("a", tuesday, 3).copy(label = "Kontrolinis darbas"), lesson("b", tuesday, 5), lesson("c", tuesday.plusDays(1), 2), lesson("d", tuesday.plusDays(1), 4))
+        val events = listOf(
+            UpcomingEvent("t1", tuesday, null, "", "Kontrolinis darbas: Fizika", ""),
+            UpcomingEvent("t2", tuesday.plusDays(1), null, "", "Kontrolinis darbas: Fizika", ""),
+            UpcomingEvent("t3", tuesday.plusDays(14), null, "", "Kontrolinis darbas: Fizika", ""),
+        )
+        assertEquals(mapOf("t1" to "Astronomija"), upcomingLessonNames(events, "Fizika", lessons, emptyList(), rules))
+        assertEquals(mapOf("t1" to "Astronomija", "t3" to "Astronomija"), upcomingLessonNames(events, "Fizika", lessons, listOf(record("x", tuesday.plusDays(14), 3)), rules))
+    }
+
     @Test fun `teacher renames split one subject by who taught the lesson`() {
         val lessons = listOf(lesson("a", tuesday, 3, "Ona Mokytoja"), lesson("b", tuesday.plusDays(1), 2, "Rūta Kita"))
         val rules = listOf(LessonRule("r", "phy", "Biologija", MatchMode.TEACHER, teacherId = "Ona Mokytoja"))
