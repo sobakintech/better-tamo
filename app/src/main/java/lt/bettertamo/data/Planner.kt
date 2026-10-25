@@ -102,6 +102,7 @@ data class CustomEvent(
     val room: String = "",
     val note: String = "",
     val slot: Int = 0,
+    val onHolidays: Boolean = false,
 )
 
 @Serializable
@@ -153,9 +154,9 @@ fun validEvent(event: CustomEvent): Boolean {
     }.getOrDefault(false)
 }
 
-fun eventsOn(date: LocalDate, events: List<CustomEvent>, lessons: List<Lesson> = emptyList()) =
+fun eventsOn(date: LocalDate, events: List<CustomEvent>, lessons: List<Lesson> = emptyList(), dayOff: Boolean = false) =
     events.filter { event ->
-        date.dayOfWeek.value in event.weekdays && lessons.none { lesson ->
+        date.dayOfWeek.value in event.weekdays && (event.onHolidays || !dayOff || lessons.isNotEmpty()) && lessons.none { lesson ->
             val overlaps = lesson.start.isNotBlank() && lesson.start < event.end && lesson.end > event.start
             if (event.slot > 0) lesson.slot == event.slot || overlaps
             else overlaps && lesson.subject.trim().equals(event.title.trim(), ignoreCase = true)

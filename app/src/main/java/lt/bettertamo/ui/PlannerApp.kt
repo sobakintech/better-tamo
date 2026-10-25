@@ -322,7 +322,7 @@ private fun TimetableScreen(date: LocalDate, state: PlannerState, selectDate: (L
                 val day = pageDay(page)
                 val schoolEvents = school.calendarEvents.filter { it.contains(day) }
                 val lessons = school.lessons.filter { it.date == day }
-                val events = eventsOn(day, state.events, lessons)
+                val events = eventsOn(day, state.events, lessons, dayOff = schoolEvents.any { it.kind != SchoolDayKind.EVENT })
                 val weekComplete = readComplete("week", mondayOf(day).toString())
                 val entries = timetableRows((lessons.map { TimetableEntry(it.start, lesson = it) } + events.map { TimetableEntry(it.start, event = it) }).sortedBy { it.start }, slotTimes(school.lessons), events)
                 val marker = nowMarker(day, entries.map { it.span }, now)?.let { ListMarker(entries[it.from].key, entries[it.to].key, it.fraction) }

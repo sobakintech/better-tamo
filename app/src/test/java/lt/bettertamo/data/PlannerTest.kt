@@ -68,6 +68,15 @@ class PlannerTest {
         assertTrue(eventsOn(monday.plusDays(1), listOf(event)).isEmpty())
     }
 
+    @Test fun `custom events hide on lesson-free holidays unless kept`() {
+        val event = CustomEvent("test", "Būrelis", setOf(1), "15:10", "15:55")
+        val kept = event.copy(onHolidays = true)
+        val monday = LocalDate.of(2026, 10, 26)
+        val lesson = Lesson("1", "s", "Istorija", "t", "T", 1, 1, "", date = monday, startTime = "08:10", endTime = "08:55")
+        assertEquals(listOf(kept), eventsOn(monday, listOf(event, kept), dayOff = true))
+        assertEquals(listOf(event), eventsOn(monday, listOf(event), listOf(lesson), dayOff = true))
+    }
+
     @Test fun `invalid event ranges days and blank names are rejected`() {
         val valid = CustomEvent("test", "Būrelis", setOf(2), "15:10", "15:55")
         assertTrue(validEvent(valid))

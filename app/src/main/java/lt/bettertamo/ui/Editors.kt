@@ -5,6 +5,7 @@ package lt.bettertamo.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -114,10 +116,11 @@ fun EventEditor(existing: CustomEvent?, defaultDay: Int, onDismiss: () -> Unit, 
     var end by rememberSaveable { mutableStateOf(existing?.end ?: defaultEnd) }
     val slot = existing?.slot ?: defaultSlot
     var note by rememberSaveable { mutableStateOf(existing?.note ?: "") }
+    var onHolidays by rememberSaveable { mutableStateOf(existing?.onHolidays ?: false) }
     val id = rememberSaveable { existing?.id ?: UUID.randomUUID().toString() }
     var pickTime by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
-    val event = CustomEvent(id, title.trim(), days.toSet(), start, end, existing?.room.orEmpty(), note.trim(), slot)
+    val event = CustomEvent(id, title.trim(), days.toSet(), start, end, existing?.room.orEmpty(), note.trim(), slot, onHolidays)
 
     EditorFrame(when { existing != null -> "Redaguoti įvykį"; slot > 0 -> "Nauja pamoka"; else -> "Naujas įvykis" }, onDismiss, validEvent(event), { onSave(event) }) {
         Text(if (slot > 0) "$slot pamoka. Pridėk pamoką, kurios nėra TAMO tvarkaraštyje." else "Pridėk tai, ko trūksta tavo savaitėje.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -135,10 +138,17 @@ fun EventEditor(existing: CustomEvent?, defaultDay: Int, onDismiss: () -> Unit, 
         }
         if (end <= start) Text("Pabaiga turi būti vėliau už pradžią.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         OutlinedTextField(value = note, onValueChange = { if (it.length <= 1000) note = it }, label = { Text("Pastaba (nebūtina)") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).toggleable(onHolidays, role = Role.Switch) { onHolidays = it }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("Rodyti per atostogas", style = MaterialTheme.typography.titleMedium)
+                Text("Ir per valstybines šventes, kai pamokų nėra.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked = onHolidays, onCheckedChange = null)
+        }
         Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
             Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(Icons.Outlined.Repeat, null)
-                Text("Įvykis bus rodomas tvarkaraštyje kiekvieną pasirinktą savaitės dieną.", style = MaterialTheme.typography.bodyMedium)
+                Text(if (onHolidays) "Įvykis bus rodomas tvarkaraštyje kiekvieną pasirinktą savaitės dieną." else "Įvykis bus rodomas tvarkaraštyje kiekvieną pasirinktą savaitės dieną, išskyrus atostogas ir šventes.", style = MaterialTheme.typography.bodyMedium)
             }
         }
         if (existing != null) TextButton(onClick = { confirmDelete = true }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
