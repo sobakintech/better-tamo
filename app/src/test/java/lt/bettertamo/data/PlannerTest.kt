@@ -159,4 +159,17 @@ class PlannerTest {
         assertEquals("vakarykštę pamoką (10.21, trečiadienis)", lessonLabel(LocalDate.of(2026, 10, 21), today))
         assertEquals("praėjusio pirmadienio pamoką (10.12)", lessonLabel(LocalDate.of(2026, 10, 12), today))
     }
+
+    @Test fun `homework takes its time from the matching feed entry`() {
+        val today = LocalDate.of(2026, 10, 22)
+        val monday = LocalDate.of(2026, 10, 19)
+        val work = Homework("1:x", "1", 1, "Pabaigti darbą", 1, dueDate = LocalDate.of(2026, 10, 26), assignedDate = monday, subject = "Gamtos mokslai")
+        val entry = SchoolNotice("9", monday, "Gamtos mokslai", "Pabaigti darbą", deadline = work.dueDate, kind = NoticeKind.HOMEWORK, lessonDate = monday, time = "13:15")
+        val other = entry.copy(id = "10", text = "Kitas darbas", time = "14:00")
+        assertEquals("Užduota 10.19 13:15 (pirmadienį)", work.assignedLabel(listOf(entry), today))
+        assertEquals("Užduota 10.19 13:15 (pirmadienį)", work.assignedLabel(listOf(other, entry), today))
+        assertEquals("Užduota 10.19 (pirmadienį)", work.assignedLabel(listOf(entry.copy(date = LocalDate.of(2026, 10, 20))), today))
+        assertEquals("Užduota 10.19 (pirmadienį)", work.assignedLabel(listOf(entry.copy(subject = "Matematika")), today))
+        assertEquals("Užduota 10.19 12:01 (pirmadienį)", work.copy(assignedTime = "12:01").assignedLabel(listOf(entry), today))
+    }
 }

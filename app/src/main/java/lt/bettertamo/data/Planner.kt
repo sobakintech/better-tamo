@@ -59,7 +59,18 @@ data class Homework(
     val subject: String = "",
     val completed: Boolean = false,
     val files: List<SchoolFile> = emptyList(),
+    val assignedTime: String = "",
 )
+
+fun Homework.assignedLabel(feed: List<SchoolNotice>, today: LocalDate = LocalDate.now()): String? {
+    val assigned = assignedDate ?: return null
+    fun stamp(date: LocalDate, time: String = "") = listOf(date.format(shortDate), time).filter { it.isNotBlank() }.joinToString(" ") + " (${relativeDay(date, today)})"
+    if (assignedTime.isNotBlank()) return "Užduota ${stamp(assigned, assignedTime)}"
+    fun compact(value: String) = value.replace(Regex("\\s+"), " ").trim()
+    val candidates = feed.filter { it.kind == NoticeKind.HOMEWORK && it.time.isNotBlank() && it.subject == subject && it.deadline == dueDate && (it.lessonDate ?: assigned) == assigned }
+    val entry = candidates.singleOrNull() ?: candidates.firstOrNull { compact(it.text) == compact(text) }
+    return "Užduota ${stamp(assigned, entry?.takeIf { it.date == assigned }?.time.orEmpty())}"
+}
 
 private val webLink = Regex("""(?i)\b(?:https?://|www\.)[^\s<>"']+""")
 

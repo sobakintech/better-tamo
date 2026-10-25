@@ -49,6 +49,13 @@ class TamoMapperTest {
         assertNotEquals(origin.subjectId, unmatched.subjectId)
     }
 
+    @Test fun homeworkKeepsAssignedTimeOnlyWhenTamoSendsOne() {
+        val items = listOf("2026-09-07", "2026-09-07T00:00:00", "2026-09-07T14:05:31").mapIndexed { index, date -> """{"lessonId":${index + 1},"date":"$date","deadline":"2026-09-09","homeWork":"Read","thingName":"Dailė"}""" }
+        val work = mapper.homework(json("""{"items":[${items.joinToString(",")}]}"""))
+        assertEquals(listOf("", "", "14:05"), work.map { it.assignedTime })
+        assertTrue(work.all { it.assignedDate == LocalDate.of(2026, 9, 7) })
+    }
+
     @Test fun homeworkDeadlineDoesNotChooseItsLessonOverride() {
         val work = mapper.homework(json("""{"items":[{"lessonId":41,"date":"2026-09-07","deadline":"2026-09-09","homeWork":"Read chapter 1","thingName":"Gamtos mokslai","completionDate":null}]}""")).single()
         val monday = Lesson("41", "science", "Gamtos mokslai", "teacher", "Teacher A", 1, 2, "")

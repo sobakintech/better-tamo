@@ -379,7 +379,7 @@ class TamoMapper(private val text: (String) -> String = { it }) {
         val assigned = date(item.string("date"))
         val id = item.string("lessonId")
         if (id.isBlank() || id == "0") throw TamoFailure("TAMO negrąžino namų darbo identifikatoriaus.")
-        Homework("$id:$due", id, due.dayOfWeek.value, body, assigned?.dayOfWeek?.value ?: 1, due, assigned, text(item.string("thingName")), item.string("completionDate").isNotBlank(), files)
+        Homework("$id:$due", id, due.dayOfWeek.value, body, assigned?.dayOfWeek?.value ?: 1, due, assigned, text(item.string("thingName")), item.string("completionDate").isNotBlank(), files, clock(item.string("date")))
     }.distinctBy { it.id }
 
     fun calendar(payload: JsonObject, month: YearMonth): List<SchoolCalendarEvent> = payload.requiredList("allDayEvents").map { event ->

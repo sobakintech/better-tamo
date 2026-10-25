@@ -40,7 +40,8 @@ fun HomeworkScreen(state: PlannerState, toggle: (Homework) -> Unit) {
     var past by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var filter by rememberSaveable { mutableIntStateOf(0) }
-    RefreshOnResume(past) { vm.loadHomework(past) }
+    val feed by vm.feed.collectAsStateWithLifecycle()
+    RefreshOnResume(past) { vm.loadHomework(past); vm.loadFeed() }
     val today = LocalDate.now()
     val from = if (past) today.minusDays(30) else today
     val to = if (past) today.minusDays(1) else today.plusDays(30)
@@ -88,7 +89,7 @@ fun HomeworkScreen(state: PlannerState, toggle: (Homework) -> Unit) {
         if ("homework" in errors) ReadStatus("homework", showProgress = false) { vm.loadHomework(past, true) }
         PullToRefreshBox(
             isRefreshing = "homework" in loading,
-            onRefresh = { vm.loadHomework(past, true) },
+            onRefresh = { vm.loadHomework(past, true); vm.loadFeed(true) },
             modifier = Modifier.weight(1f).fillMaxWidth(),
         ) {
             LazyColumn(modifier = Modifier.fillMaxSize().semantics {
@@ -105,7 +106,7 @@ fun HomeworkScreen(state: PlannerState, toggle: (Homework) -> Unit) {
                     items(entries, key = { it.id }) { homework ->
                         val lesson = school.origin(homework.lessonId)
                         val subject = lesson?.let { resolveSubject(it, state.rules).name } ?: homework.subject
-                        HomeworkCard(homework, subject, lesson?.teacher.orEmpty(), completed(homework)) { toggle(homework) }
+                        HomeworkCard(homework, subject, lesson?.teacher.orEmpty(), homework.assignedLabel(feed, today), completed(homework)) { toggle(homework) }
                     }
                 }
             }
@@ -131,7 +132,7 @@ internal fun DayHeading(date: LocalDate) {
 }
 
 @Composable
-private fun HomeworkCard(homework: Homework, subject: String, teacher: String, done: Boolean, onToggle: () -> Unit) {
+private fun HomeworkCard(homework: Homework, subject: String, teacher: String, assigned: String?, done: Boolean, onToggle: () -> Unit) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)) {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)) {
             Checkbox(done, { onToggle() }, modifier = Modifier.semantics { contentDescription = "Atlikta: $subject" })
@@ -140,7 +141,7 @@ private fun HomeworkCard(homework: Homework, subject: String, teacher: String, d
                     textDecoration = if (done) TextDecoration.LineThrough else null)
                 if (homework.text.isNotBlank()) LinkedText(homework.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 homework.files.forEach { AttachmentRow(it) }
-                val meta = listOfNotNull(homework.assignedDate?.let { "Užduota ${it.format(DateTimeFormatter.ofPattern("MM.dd"))}" }, teacher.takeIf { it.isNotBlank() })
+                val meta = listOfNotNull(assigned, teacher.takeIf { it.isNotBlank() })
                 if (meta.isNotEmpty()) Text(meta.joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp))
             }
