@@ -519,16 +519,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun toggleHomework(work: Homework) {
-        val local = work.id in state.value?.completedHomework.orEmpty()
-        if (session.value?.legacyRole != 2) {
-            update { it.copy(completedHomework = if (local) it.completedHomework - work.id else it.completedHomework + work.id) }
-            return
-        }
-        if (work.lessonId in savingHomework.value) return
-        if (local && !work.completed) {
-            update { it.copy(completedHomework = it.completedHomework - work.id) }
-            return
-        }
+        if (session.value?.canTickHomework != true || work.lessonId in savingHomework.value) return
         val done = !work.completed
         savingHomework.value += work.lessonId
         markHomework(work.lessonId, done)
@@ -539,7 +530,6 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
                 if (student.isBlank()) throw TamoFailure("Šios paskyros namų darbų TAMO pažymėti negalima.")
                 api.setHomeworkDone(account, student, work.lessonId, done)
                 markHomework(work.lessonId, done)
-                if (local) update { it.copy(completedHomework = it.completedHomework - work.id) }
                 persist()
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {

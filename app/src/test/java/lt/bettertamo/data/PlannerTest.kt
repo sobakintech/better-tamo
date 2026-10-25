@@ -89,7 +89,7 @@ class PlannerTest {
     }
 
     @Test fun `local customization round trips without losing unicode or selection`() {
-        val saved = DemoData.initialState.copy(theme = "dark", completedHomework = setOf("hw-bio", "hw-chem"))
+        val saved = DemoData.initialState.copy(theme = "dark")
         assertEquals(saved, Json.decodeFromString<PlannerState>(Json.encodeToString(saved)))
     }
 

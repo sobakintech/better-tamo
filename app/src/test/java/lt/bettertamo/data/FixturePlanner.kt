@@ -62,6 +62,5 @@ object DemoData {
             LessonRule("demo-literature", "lithuanian", "Literatūra", MatchMode.SLOTS, setOf("2:1", "5:6")),
         ),
         events = listOf(CustomEvent("demo-class", "Klasės valandėlė", setOf(1, 4), "15:10", "15:55", "305", "Savaitės planai ir klasės reikalai.")),
-        completedHomework = setOf("hw-grammar"),
     )
 }

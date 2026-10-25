@@ -17,6 +17,7 @@ data class SchoolRole(val id: String, val title: String, val subtitle: String, v
 
 @Serializable
 data class SchoolSession(val token: String, val personId: String, val name: String, val legacyRole: Int, val roles: List<SchoolRole> = emptyList(), val selectedRole: String? = null) {
+    val canTickHomework get() = legacyRole == 2
     val scope get() = "$personId:${selectedRole.orEmpty()}"
     override fun toString() = "SchoolSession([redacted])"
 }

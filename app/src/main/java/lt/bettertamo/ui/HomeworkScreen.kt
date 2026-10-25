@@ -41,16 +41,16 @@ fun HomeworkScreen(state: PlannerState, toggle: (Homework) -> Unit) {
     var menu by remember { mutableStateOf(false) }
     var filter by rememberSaveable { mutableIntStateOf(0) }
     val feed by vm.feed.collectAsStateWithLifecycle()
+    val canTick = vm.session.collectAsStateWithLifecycle().value?.canTickHomework == true
     RefreshOnResume(past) { vm.loadHomework(past); vm.loadFeed() }
     val today = LocalDate.now()
     val from = if (past) today.minusDays(30) else today
     val to = if (past) today.minusDays(1) else today.plusDays(30)
     val loaded = school.homeworkLoaded == "$from:$to"
     val complete = readComplete("homework", "$from:$to")
-    fun completed(work: Homework) = work.completed || work.id in state.completedHomework
     val allWork = if (loaded) school.homework else emptyList()
-    val done = allWork.count { completed(it) }
-    val work = allWork.filter { when (filter) { 1 -> !completed(it); 2 -> completed(it); else -> true } }
+    val done = allWork.count { it.completed }
+    val work = allWork.filter { when (if (canTick) filter else 0) { 1 -> !it.completed; 2 -> it.completed; else -> true } }
     Column(Modifier.fillMaxSize()) {
         Surface(color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
             Column {
@@ -83,7 +83,7 @@ fun HomeworkScreen(state: PlannerState, toggle: (Homework) -> Unit) {
                     KeepScreenOnButton()
                     ProfileButton()
                 }
-                HeaderFilters(listOf("Visi" to allWork.size, "Neatlikti" to allWork.size - done, "Atlikti" to done).map { (label, count) -> label to count.takeIf { loaded } }, filter) { filter = it }
+                if (canTick) HeaderFilters(listOf("Visi" to allWork.size, "Neatlikti" to allWork.size - done, "Atlikti" to done).map { (label, count) -> label to count.takeIf { loaded } }, filter) { filter = it }
             }
         }
         if ("homework" in errors) ReadStatus("homework", showProgress = false) { vm.loadHomework(past, true) }
@@ -106,7 +106,7 @@ fun HomeworkScreen(state: PlannerState, toggle: (Homework) -> Unit) {
                     items(entries, key = { it.id }) { homework ->
                         val lesson = school.origin(homework.lessonId)
                         val subject = lesson?.let { resolveSubject(it, state.rules).name } ?: homework.subject
-                        HomeworkCard(homework, subject, lesson?.teacher.orEmpty(), homework.assignedLabel(feed, today), completed(homework)) { toggle(homework) }
+                        HomeworkCard(homework, subject, lesson?.teacher.orEmpty(), homework.assignedLabel(feed, today), homework.completed, if (canTick) ({ toggle(homework) }) else null)
                     }
                 }
             }
@@ -132,10 +132,10 @@ internal fun DayHeading(date: LocalDate) {
 }
 
 @Composable
-private fun HomeworkCard(homework: Homework, subject: String, teacher: String, assigned: String?, done: Boolean, onToggle: () -> Unit) {
+private fun HomeworkCard(homework: Homework, subject: String, teacher: String, assigned: String?, done: Boolean, onToggle: (() -> Unit)?) {
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)) {
-        Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)) {
-            Checkbox(done, { onToggle() }, modifier = Modifier.semantics { contentDescription = "Atlikta: $subject" })
+        Row(Modifier.fillMaxWidth().padding(start = if (onToggle != null) 4.dp else 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)) {
+            if (onToggle != null) Checkbox(done, { onToggle() }, modifier = Modifier.semantics { contentDescription = "Atlikta: $subject" })
             Column(Modifier.weight(1f).padding(top = 12.dp).alpha(if (done) 0.6f else 1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(subject, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     textDecoration = if (done) TextDecoration.LineThrough else null)

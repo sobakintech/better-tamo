@@ -122,7 +122,6 @@ data class CustomEvent(
 data class PlannerState(
     val rules: List<LessonRule> = emptyList(),
     val events: List<CustomEvent> = emptyList(),
-    val completedHomework: Set<String> = emptySet(),
     val theme: String = "system",
     val ruleSources: List<RuleSource> = emptyList(),
 )
