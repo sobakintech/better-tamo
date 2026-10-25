@@ -10,6 +10,7 @@ import java.net.URI
 import java.net.URLEncoder
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -258,6 +259,8 @@ class TamoMapper(private val text: (String) -> String = { it }) {
 
     private fun dateTime(value: String): LocalDateTime? = runCatching { LocalDateTime.parse(value.take(19)) }.getOrNull()
 
+    private fun clock(value: String): String = dateTime(value)?.toLocalTime()?.takeIf { it != LocalTime.MIDNIGHT }?.let { "%02d:%02d".format(it.hour, it.minute) }.orEmpty()
+
     fun messageHeaders(items: List<JsonObject>, sent: Boolean, deleted: Boolean = false): List<MessageHeader> = items.mapNotNull { item ->
         val id = item.string("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
         val sid = item.string("sid").takeIf { it.isNotBlank() } ?: return@mapNotNull null
@@ -457,7 +460,7 @@ class TamoMapper(private val text: (String) -> String = { it }) {
                 "8" -> SchoolNotice(id, day, subject, field("Value"), kind = remarkKind(field("Type")), value = field("Type"), lessonDate = lessonDate)
                 else -> listOf(field("Description"), field("HomeWork"), field("Vertinimas"), field("Value")).filter { it.isNotBlank() }.distinct().joinToString("\n")
                     .takeIf { it.isNotBlank() }?.let { SchoolNotice(id, day, subject, it, deadline = date(field("Deadline")), lessonDate = lessonDate) }
-            }
+            }?.copy(time = clock(item.string("date")))
         }
     }
 

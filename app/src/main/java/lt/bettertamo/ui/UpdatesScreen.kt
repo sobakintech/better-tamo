@@ -25,6 +25,7 @@ import lt.bettertamo.data.DiaryKind
 import lt.bettertamo.data.NoticeKind
 import lt.bettertamo.data.SchoolNotice
 import lt.bettertamo.data.dayShort
+import lt.bettertamo.data.lessonLabel
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -97,14 +98,18 @@ internal fun NoticeRow(notice: SchoolNotice, showDate: Boolean = false) {
                     date?.let { Text(if (value != null) " · $it" else it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
                 if (notice.teacher.isNotBlank()) Text(notice.teacher, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val entered = listOf("Įrašyta", notice.time).filter { it.isNotBlank() }.joinToString(" ")
+                val intoLesson = notice.lessonDate?.let { "$entered į ${lessonLabel(it)}" }
+                val marked = notice.kind in setOf(NoticeKind.GRADE, NoticeKind.FORMATIVE, NoticeKind.ATTENDANCE)
                 val text = when (notice.kind) {
-                    NoticeKind.GRADE -> notice.lessonDate?.let { "Įrašyta į ${it.format(format)} pamoką" }.orEmpty()
-                    NoticeKind.ATTENDANCE -> notice.lessonDate?.let { "Įrašyta į ${it.format(format)} pamoką" } ?: attendanceLabel(notice.value)
-                    NoticeKind.FORMATIVE -> listOf("Kaupiamasis", notice.text).filter { it.isNotBlank() }.joinToString(" · ") + (notice.lessonDate?.let { " · ${it.format(format)} pamoka" } ?: "")
+                    NoticeKind.GRADE -> intoLesson.orEmpty()
+                    NoticeKind.ATTENDANCE -> intoLesson ?: attendanceLabel(notice.value)
+                    NoticeKind.FORMATIVE -> listOfNotNull(listOf("Kaupiamasis", notice.text).filter { it.isNotBlank() }.joinToString(" · "), intoLesson).joinToString("\n")
                     else -> notice.text
                 }
-                if (text.isNotBlank()) LinkedText(text, color = if (notice.kind in setOf(NoticeKind.GRADE, NoticeKind.FORMATIVE, NoticeKind.ATTENDANCE)) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
-                notice.deadline?.let { Text("Atlikti iki ${it.format(format)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if (text.isNotBlank()) LinkedText(text, color = if (marked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+                val footer = listOfNotNull(entered.takeIf { notice.time.isNotBlank() && (!marked || intoLesson == null) }, notice.deadline?.let { "Atlikti iki ${it.format(format)}" })
+                if (footer.isNotEmpty()) Text(footer.joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

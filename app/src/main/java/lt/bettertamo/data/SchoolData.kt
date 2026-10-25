@@ -33,6 +33,7 @@ data class SchoolNotice(
     val kind: NoticeKind = NoticeKind.OTHER,
     val value: String = "",
     val lessonDate: LocalDate? = null,
+    val time: String = "",
 )
 
 data class SchoolData(

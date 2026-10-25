@@ -92,6 +92,8 @@ class LiveShapeTest {
         ), false).associateBy { it.id }
         assertEquals(NoticeKind.HOMEWORK, notices.getValue("1").kind)
         assertEquals(LocalDate.of(2026, 10, 1), notices.getValue("1").deadline)
+        assertEquals("13:15", notices.getValue("1").time)
+        assertEquals("07:38", notices.getValue("4").time)
         assertEquals(NoticeKind.GRADE, notices.getValue("2").kind)
         assertEquals("5", notices.getValue("2").value)
         assertEquals(LocalDate.of(2026, 9, 24), notices.getValue("2").lessonDate)

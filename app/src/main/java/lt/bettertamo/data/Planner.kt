@@ -10,6 +10,8 @@ import java.time.LocalTime
 import java.time.LocalDateTime
 import java.time.Duration
 import java.time.temporal.TemporalAdjusters
+import java.time.temporal.ChronoUnit
+import java.time.format.DateTimeFormatter
 
 @Serializable
 data class Lesson(
@@ -201,4 +203,37 @@ fun mondayOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousO
 
 val dayShort = listOf("Pr", "An", "Tr", "Kt", "Pn", "Št", "Sk")
 val dayLong = listOf("Pirmadienis", "Antradienis", "Trečiadienis", "Ketvirtadienis", "Penktadienis", "Šeštadienis", "Sekmadienis")
+private val dayAccusative = listOf("pirmadienį", "antradienį", "trečiadienį", "ketvirtadienį", "penktadienį", "šeštadienį", "sekmadienį")
+private val dayGenitive = listOf("pirmadienio", "antradienio", "trečiadienio", "ketvirtadienio", "penktadienio", "šeštadienio", "sekmadienio")
+private val shortDate = DateTimeFormatter.ofPattern("MM.dd")
+
+private fun weeksFrom(today: LocalDate, date: LocalDate) = ChronoUnit.WEEKS.between(mondayOf(today), mondayOf(date))
+
+fun relativeDay(date: LocalDate, today: LocalDate = LocalDate.now()): String {
+    val day = dayAccusative[date.dayOfWeek.value - 1]
+    return when (ChronoUnit.DAYS.between(today, date)) {
+        0L -> "šiandien, $day"; -1L -> "vakar, $day"; -2L -> "užvakar, $day"; 1L -> "rytoj, $day"; 2L -> "poryt, $day"
+        else -> when (weeksFrom(today, date)) {
+            0L -> day; -1L -> "praėjusį $day"; -2L -> "užpraėjusį $day"; 1L -> "kitą $day"
+            else -> day
+        }
+    }
+}
+
+fun relativeLesson(date: LocalDate, today: LocalDate = LocalDate.now()): String {
+    val day = dayGenitive[date.dayOfWeek.value - 1]
+    return when (ChronoUnit.DAYS.between(today, date)) {
+        0L -> "šiandienos"; -1L -> "vakarykštę"; -2L -> "užvakarykštę"; 1L -> "rytdienos"
+        else -> when (weeksFrom(today, date)) {
+            0L -> day; -1L -> "praėjusio $day"; -2L -> "užpraėjusio $day"; 1L -> "kito $day"
+            else -> day
+        }
+    } + " pamoką"
+}
+
+fun lessonLabel(date: LocalDate, today: LocalDate = LocalDate.now()): String {
+    val weekday = dayLong[date.dayOfWeek.value - 1].lowercase().takeIf { ChronoUnit.DAYS.between(today, date) in -2L..1L }
+    return "${relativeLesson(date, today)} (${listOfNotNull(date.format(shortDate), weekday).joinToString(", ")})"
+}
+
 val bellTimes = listOf("08:10" to "08:55", "09:05" to "09:50", "10:00" to "10:45", "11:15" to "12:00", "12:25" to "13:10", "13:20" to "14:05", "14:15" to "15:00")

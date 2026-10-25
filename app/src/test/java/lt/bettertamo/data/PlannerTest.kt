@@ -147,4 +147,16 @@ class PlannerTest {
     @Test fun `old preferences remain compatible without saved rule sources`() {
         assertTrue(Json.decodeFromString<PlannerState>("{\"theme\":\"dark\"}").ruleSources.isEmpty())
     }
+
+    @Test fun `relative days name the weekday and week`() {
+        val today = LocalDate.of(2026, 10, 22)
+        fun day(month: Int, day: Int) = relativeDay(LocalDate.of(2026, month, day), today)
+        assertEquals(listOf("šiandien, ketvirtadienį", "vakar, trečiadienį", "užvakar, antradienį", "pirmadienį", "praėjusį penktadienį", "užpraėjusį antradienį", "antradienį", "kitą antradienį"),
+            listOf(day(10, 22), day(10, 21), day(10, 20), day(10, 19), day(10, 16), day(10, 6), day(9, 29), day(10, 27)))
+        fun lesson(month: Int, day: Int) = relativeLesson(LocalDate.of(2026, month, day), today)
+        assertEquals(listOf("šiandienos pamoką", "vakarykštę pamoką", "pirmadienio pamoką", "praėjusio pirmadienio pamoką", "antradienio pamoką"),
+            listOf(lesson(10, 22), lesson(10, 21), lesson(10, 19), lesson(10, 12), lesson(9, 29)))
+        assertEquals("vakarykštę pamoką (10.21, trečiadienis)", lessonLabel(LocalDate.of(2026, 10, 21), today))
+        assertEquals("praėjusio pirmadienio pamoką (10.12)", lessonLabel(LocalDate.of(2026, 10, 12), today))
+    }
 }
